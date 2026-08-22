@@ -4,6 +4,17 @@ import { setOptions, importLibrary } from '@googlemaps/js-api-loader';
 
 const props = defineProps<{
   apiKey: string;
+  parks: Array<{
+    id: number;
+    park_id: string;
+    name: string;
+    property_type: string;
+    park_type: string | null;
+    acres: number | null;
+    latitude: number | null;
+    longitude: number | null;
+    geometry: string | null;
+  }>;
 }>();
 
 const mapContainer = ref<HTMLDivElement>();
@@ -46,6 +57,27 @@ onMounted(async () => {
       mapTypeId: 'roadmap',
     });
     console.log('Map created successfully');
+
+    // Add markers for each park
+    if (props.parks && props.parks.length > 0) {
+      console.log(`Adding ${props.parks.length} park markers...`);
+      
+      props.parks.forEach((park) => {
+        const lat = parseFloat(park.latitude?.toString() || '0');
+        const lng = parseFloat(park.longitude?.toString() || '0');
+        
+        if (!isNaN(lat) && !isNaN(lng) && lat !== 0 && lng !== 0) {
+          const marker = new (window as any).google.maps.Marker({
+            map: map,
+            position: { lat, lng },
+            title: park.name,
+          });
+          console.log(`Added marker for: ${park.name} at ${lat}, ${lng}`);
+        } else {
+          console.log(`Skipping ${park.name}: invalid coordinates (${park.latitude}, ${park.longitude})`);
+        }
+      });
+    }
 
     // Load the drawing polyfill after map is initialized
     console.log('Loading drawing polyfill...');
