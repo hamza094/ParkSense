@@ -28,7 +28,10 @@ return [
         'region' => env('AWS_DEFAULT_REGION', 'us-east-1'),
     ],
 
-    'fortyguard_api_key' => env('FORTYGUARD_API_KEY'),
+    'fortyguard' => [
+        'key' => env('FORTYGUARD_API_KEY'),
+        'url' => env('FORTYGUARD_API_URL', 'https://api.fortyguard.com/v1'),
+    ],
 
     'slack' => [
         'notifications' => [

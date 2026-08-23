@@ -1,6 +1,11 @@
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted } from 'vue';
+import { ref, onMounted, onUnmounted, watch } from 'vue';
 import { setOptions, importLibrary } from '@googlemaps/js-api-loader';
+import { useHttp } from '@inertiajs/vue3';
+
+const http = useHttp({
+  coordinates: [] as any[],
+});
 
 const props = defineProps<{
   apiKey: string;
@@ -15,17 +20,144 @@ const props = defineProps<{
     longitude: number | null;
     geometry: string | null;
   }>;
+  heatmapGeoJson?: {
+    type: string;
+    features: Array<{
+      id: string;
+      type: string;
+      properties: {
+        tile_id: number;
+        average_temperature: number;
+        min_temperature: number;
+        max_temperature: number;
+      };
+      geometry: {
+        type: string;
+        coordinates: number[][][];
+      };
+    }>;
+  };
+}>();
+
+const emit = defineEmits<{
+  'polygon-submitted': [activityId: string];
 }>();
 
 const mapContainer = ref<HTMLDivElement>();
 let map: any = null;
+let heatmapLayer: any = null;
+const mapReady = ref(false);
 
 // Phoenix, Arizona coordinates
 const phoenixCenter = { lat: 33.4484, lng: -112.0740 };
 
-onMounted(async () => {
-  console.log('GoogleMap mounting. apiKey present:', !!props.apiKey, 'length:', props.apiKey?.length);
+// Function to get color based on temperature
+const getTemperatureColor = (temperature: number) => {
+  // Use tight range for maximum sensitivity to small differences
+  const minTemp = 34.5;
+  const maxTemp = 34.7;
+  const normalized = (temperature - minTemp) / (maxTemp - minTemp);
+  
+  // Clamp to 0-1 range
+  const clamped = Math.max(0, Math.min(1, normalized));
+  
+  // Use a more dramatic color gradient for better contrast
+  // Deep blue (cool) → Blue → Cyan → Green → Yellow → Orange → Red → Deep red (hot)
+  const hue = (1 - clamped) * 280; // 280 (deep purple/blue) to 0 (red)
+  const saturation = 85 + (clamped * 15); // 85-100% saturation
+  const lightness = 40 + (clamped * 15); // 40-55% lightness
+  
+  return `hsl(${hue}, ${saturation}%, ${lightness}%)`;
+};
 
+// Function to render GeoJSON heatmap tiles
+const renderHeatmapTiles = (geoJson: any) => {
+  console.log('🗺️ HEATMAP: renderHeatmapTiles FUNCTION START');
+  console.log('Map exists:', !!map);
+  console.log('GeoJson exists:', !!geoJson);
+  console.log('GeoJson features:', geoJson?.features?.length);
+  
+  if (!map) {
+    console.error('❌ HEATMAP: Map not initialized');
+    return;
+  }
+  
+  if (!geoJson || !geoJson.features) {
+    console.error('❌ HEATMAP: Invalid GeoJSON data');
+    return;
+  }
+  
+  // Clear existing heatmap layer
+  if (heatmapLayer) {
+    heatmapLayer.setMap(null);
+    heatmapLayer = null;
+  }
+  
+  console.log('🗺️ HEATMAP: Rendering', geoJson.features.length, 'features');
+  
+  // Log temperature range to debug color issues
+  const temperatures = geoJson.features
+    .filter((f: any) => f.properties.min_temperature)
+    .map((f: any) => f.properties.min_temperature);
+  
+  if (temperatures.length > 0) {
+    const min = Math.min(...temperatures);
+    const max = Math.max(...temperatures);
+    console.log('🗺️ HEATMAP: Temperature range - Min:', min, 'Max:', max, 'Range:', max - min);
+  }
+  
+  // Create polygon for each feature
+  geoJson.features.forEach((feature: any, index: number) => {
+    console.log(`🗺️ HEATMAP: Processing feature ${index}`, feature.geometry.type, feature.properties);
+    
+    if (feature.geometry.type === 'Polygon' && feature.properties.min_temperature) {
+      const coordinates = feature.geometry.coordinates[0].map((coord: number[]) => ({
+        lat: coord[1],
+        lng: coord[0],
+      }));
+      
+      // Use min_temperature for coloring
+      const temperature = feature.properties.min_temperature;
+      const color = getTemperatureColor(temperature);
+      
+      console.log(`🗺️ HEATMAP: Tile ${index} - Min Temp: ${temperature}°C, Color: ${color}`);
+      
+      const polygon = new (window as any).google.maps.Polygon({
+        paths: coordinates,
+        strokeColor: color,
+        strokeOpacity: 0.8,
+        strokeWeight: 1,
+        fillColor: color,
+        fillOpacity: 0.5,
+        map: map,
+      });
+      
+      console.log(`🗺️ HEATMAP: Polygon created for tile ${index}`);
+      
+      // Add click event to show temperature info
+      polygon.addListener('click', () => {
+        const infoWindow = new (window as any).google.maps.InfoWindow({
+          content: `
+            <div style="padding: 8px;">
+              <strong>Tile ${feature.properties.tile_id}</strong><br>
+              Avg Temp: ${temperature.toFixed(1)}°C<br>
+              Min Temp: ${feature.properties.min_temperature.toFixed(1)}°C<br>
+              Max Temp: ${feature.properties.max_temperature.toFixed(1)}°C
+            </div>
+          `,
+          position: coordinates[0],
+        });
+        infoWindow.open(map);
+      });
+    } else {
+      console.warn(`⚠️ HEATMAP: Feature ${index} skipped - type: ${feature.geometry.type}, has temp: ${!!feature.properties.average_temperature}`);
+    }
+  });
+  
+  console.log('🗺️ HEATMAP: Rendering complete');
+};
+
+onMounted(async () => {
   if (!mapContainer.value) {
     console.error('mapContainer ref is missing');
     return;
@@ -36,14 +168,11 @@ onMounted(async () => {
   }
 
   try {
-    console.log('Setting up Google Maps API...');
     setOptions({
       key: props.apiKey,
     });
 
-    console.log('Importing Maps library...');
     const { Map } = await importLibrary('maps');
-    console.log('Maps library imported, creating map...');
 
     map = new Map(mapContainer.value, {
       center: phoenixCenter,
@@ -56,11 +185,12 @@ onMounted(async () => {
       },
       mapTypeId: 'roadmap',
     });
-    console.log('Map created successfully');
+
+    console.log('🗺️ MAP: Map initialized successfully');
+    mapReady.value = true;
 
     // Add markers for each park
     if (props.parks && props.parks.length > 0) {
-      console.log(`Adding ${props.parks.length} park markers...`);
       
       props.parks.forEach((park) => {
         const lat = parseFloat(park.latitude?.toString() || '0');
@@ -72,19 +202,14 @@ onMounted(async () => {
             position: { lat, lng },
             title: park.name,
           });
-          console.log(`Added marker for: ${park.name} at ${lat}, ${lng}`);
-        } else {
-          console.log(`Skipping ${park.name}: invalid coordinates (${park.latitude}, ${park.longitude})`);
         }
       });
     }
 
     // Load the drawing polyfill after map is initialized
-    console.log('Loading drawing polyfill...');
     const polyfillScript = document.createElement('script');
     polyfillScript.src = '/mcx-drawing-polyfill.js';
     polyfillScript.onload = () => {
-      console.log('Drawing polyfill loaded, initializing DrawingManager...');
       initDrawingManager();
     };
     polyfillScript.onerror = () => {
@@ -130,7 +255,6 @@ const initDrawingManager = () => {
     drawingManager,
     'polygoncomplete',
     (polygon: any) => {
-      console.log('Polygon completed:', polygon);
       const path = polygon.getPath();
       const coordinates = [];
       for (let i = 0; i < path.getLength(); i++) {
@@ -141,15 +265,57 @@ const initDrawingManager = () => {
         });
       }
       console.log('Polygon coordinates:', coordinates);
+      
+      // Send polygon data to backend using useHttp
+      http.coordinates = coordinates;
+      http.post('/parks/polygon', {
+        onSuccess: (data: any) => {
+          console.log('✅ SUCCESS: Polygon submitted successfully');
+          console.log('Response data:', data);
+          const activityId = data.activity_id;
+          
+          if (activityId) {
+            console.log('✅ SUCCESS: Activity ID received:', activityId);
+            // Emit event for parent component to handle polling
+            emit('polygon-submitted', activityId);
+          } else {
+            console.error('❌ FAILURE: No activity_id in response');
+          }
+        },
+        onError: (errors: any) => {
+          console.error('❌ FAILURE: Error submitting polygon');
+          console.error('Error details:', errors);
+        },
+      });
     }
   );
 };
+
+// Watch for both map readiness and GeoJSON data
+watch([() => mapReady.value, () => props.heatmapGeoJson], ([ready, geoJson]) => {
+  console.log('🗺️ HEATMAP: Watch triggered - mapReady:', ready, 'hasGeoJson:', !!geoJson);
+  
+  if (ready && geoJson) {
+    console.log('🗺️ HEATMAP: Both map ready and GeoJSON available, rendering tiles');
+    console.log('GeoJSON features count:', geoJson?.features?.length);
+    
+    try {
+      renderHeatmapTiles(geoJson);
+      console.log('🗺️ HEATMAP: renderHeatmapTiles call completed');
+    } catch (error) {
+      console.error('❌ HEATMAP: Error calling renderHeatmapTiles:', error);
+    }
+  } else if (!ready && geoJson) {
+    console.log('⏳ HEATMAP: GeoJSON available but map not ready yet, waiting...');
+  }
+}, { deep: true });
 
 onUnmounted(() => {
   if (map) {
     map = null;
   }
 });
+
 </script>
 
 <template>
