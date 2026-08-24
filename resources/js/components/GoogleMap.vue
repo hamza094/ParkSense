@@ -72,18 +72,14 @@ const getTemperatureColor = (temperature: number) => {
 
 // Function to render GeoJSON heatmap tiles
 const renderHeatmapTiles = (geoJson: any) => {
-  console.log('🗺️ HEATMAP: renderHeatmapTiles FUNCTION START');
-  console.log('Map exists:', !!map);
-  console.log('GeoJson exists:', !!geoJson);
-  console.log('GeoJson features:', geoJson?.features?.length);
   
   if (!map) {
-    console.error('❌ HEATMAP: Map not initialized');
+    console.error('Map not initialized');
     return;
   }
   
   if (!geoJson || !geoJson.features) {
-    console.error('❌ HEATMAP: Invalid GeoJSON data');
+    console.error('Invalid GeoJSON data');
     return;
   }
   
@@ -93,22 +89,13 @@ const renderHeatmapTiles = (geoJson: any) => {
     heatmapLayer = null;
   }
   
-  console.log('🗺️ HEATMAP: Rendering', geoJson.features.length, 'features');
-  
   // Log temperature range to debug color issues
   const temperatures = geoJson.features
     .filter((f: any) => f.properties.min_temperature)
     .map((f: any) => f.properties.min_temperature);
   
-  if (temperatures.length > 0) {
-    const min = Math.min(...temperatures);
-    const max = Math.max(...temperatures);
-    console.log('🗺️ HEATMAP: Temperature range - Min:', min, 'Max:', max, 'Range:', max - min);
-  }
-  
   // Create polygon for each feature
   geoJson.features.forEach((feature: any, index: number) => {
-    console.log(`🗺️ HEATMAP: Processing feature ${index}`, feature.geometry.type, feature.properties);
     
     if (feature.geometry.type === 'Polygon' && feature.properties.min_temperature) {
       const coordinates = feature.geometry.coordinates[0].map((coord: number[]) => ({
@@ -120,8 +107,6 @@ const renderHeatmapTiles = (geoJson: any) => {
       const temperature = feature.properties.min_temperature;
       const color = getTemperatureColor(temperature);
       
-      console.log(`🗺️ HEATMAP: Tile ${index} - Min Temp: ${temperature}°C, Color: ${color}`);
-      
       const polygon = new (window as any).google.maps.Polygon({
         paths: coordinates,
         strokeColor: color,
@@ -131,8 +116,6 @@ const renderHeatmapTiles = (geoJson: any) => {
         fillOpacity: 0.5,
         map: map,
       });
-      
-      console.log(`🗺️ HEATMAP: Polygon created for tile ${index}`);
       
       // Add click event to show temperature info
       polygon.addListener('click', () => {
@@ -150,11 +133,9 @@ const renderHeatmapTiles = (geoJson: any) => {
         infoWindow.open(map);
       });
     } else {
-      console.warn(`⚠️ HEATMAP: Feature ${index} skipped - type: ${feature.geometry.type}, has temp: ${!!feature.properties.average_temperature}`);
+      console.warn(`Feature ${index} skipped - type: ${feature.geometry.type}, has temp: ${!!feature.properties.average_temperature}`);
     }
   });
-  
-  console.log('🗺️ HEATMAP: Rendering complete');
 };
 
 onMounted(async () => {
@@ -186,7 +167,6 @@ onMounted(async () => {
       mapTypeId: 'roadmap',
     });
 
-    console.log('🗺️ MAP: Map initialized successfully');
     mapReady.value = true;
 
     // Add markers for each park
@@ -270,21 +250,17 @@ const initDrawingManager = () => {
       http.coordinates = coordinates;
       http.post('/parks/polygon', {
         onSuccess: (data: any) => {
-          console.log('✅ SUCCESS: Polygon submitted successfully');
-          console.log('Response data:', data);
           const activityId = data.activity_id;
           
           if (activityId) {
-            console.log('✅ SUCCESS: Activity ID received:', activityId);
             // Emit event for parent component to handle polling
             emit('polygon-submitted', activityId);
           } else {
-            console.error('❌ FAILURE: No activity_id in response');
+            console.error('No activity_id in response');
           }
         },
         onError: (errors: any) => {
-          console.error('❌ FAILURE: Error submitting polygon');
-          console.error('Error details:', errors);
+          console.error('Error submitting polygon:', errors);
         },
       });
     }
@@ -293,20 +269,14 @@ const initDrawingManager = () => {
 
 // Watch for both map readiness and GeoJSON data
 watch([() => mapReady.value, () => props.heatmapGeoJson], ([ready, geoJson]) => {
-  console.log('🗺️ HEATMAP: Watch triggered - mapReady:', ready, 'hasGeoJson:', !!geoJson);
   
   if (ready && geoJson) {
-    console.log('🗺️ HEATMAP: Both map ready and GeoJSON available, rendering tiles');
-    console.log('GeoJSON features count:', geoJson?.features?.length);
     
     try {
       renderHeatmapTiles(geoJson);
-      console.log('🗺️ HEATMAP: renderHeatmapTiles call completed');
     } catch (error) {
-      console.error('❌ HEATMAP: Error calling renderHeatmapTiles:', error);
+      console.error('Error rendering heatmap tiles:', error);
     }
-  } else if (!ready && geoJson) {
-    console.log('⏳ HEATMAP: GeoJSON available but map not ready yet, waiting...');
   }
 }, { deep: true });
 

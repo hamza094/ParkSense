@@ -32,34 +32,17 @@ const currentActivityId = ref<string | null>(null);
 const heatmapStatus = ref<any>(null);
 const heatmapResult = ref<any>(null);
 const pollingInterval = ref<number | null>(null);
+const heatAnalysisResults = ref<any>(null);
+const isRunningAnalysis = ref(false);
 
 // Initialize useHttp for polling status
 const pollHttp = useHttp({});
 
-// Experiment code (commented out - for testing only)
-/*
-// Load cached data on mount for practice
-onMounted(() => {
-    if (props.cachedHeatmap?.cached && props.cachedHeatmap?.data) {
-        console.log('✅ PRACTICE: Loading cached heatmap data');
-        console.log('Cached data:', props.cachedHeatmap.data);
-        
-        const result = props.cachedHeatmap.data.data?.result;
-        if (result) {
-            heatmapResult.value = result;
-            heatmapStatus.value = props.cachedHeatmap.data;
-            currentActivityId.value = props.cachedHeatmap.data.data?.activity_id;
-            console.log('✅ PRACTICE: Heatmap result loaded from cache');
-        }
-    } else {
-        console.log('⚠️ PRACTICE: No cached heatmap data found');
-    }
-});
-*/
+// Initialize useHttp for heat analysis
+const heatAnalysisHttp = useHttp({});
 
 // Original polling code (restored)
 const handlePolygonSubmitted = (activityId: string) => {
-    console.log('✅ SUCCESS: Polygon submitted with activity ID:', activityId);
     currentActivityId.value = activityId;
     startPolling(activityId);
     // Show success message
@@ -82,47 +65,31 @@ const startPolling = (activityId: string) => {
 };
 
 const checkHeatmapStatus = (activityId: string) => {
-    console.log('🔄 POLLING: Checking heatmap status for activity ID:', activityId);
-    
     pollHttp.get('/parks/heatmap-status/' + activityId, {
         onSuccess: (data: any) => {
-            console.log('✅ SUCCESS: Heatmap status check successful');
-            console.log('Response data:', data);
             heatmapStatus.value = data;
             
             const status = data?.data?.status;
-            console.log('📊 STATUS:', status);
             
             if (status === 'Completed' || status === 'Failed') {
-                console.log('🏁 POLLING COMPLETE: Final status is', status);
-                
                 if (status === 'Completed' && data?.data?.result) {
-                    console.log('✅ SUCCESS: Heatmap processing completed successfully');
-                    console.log('Heatmap result:', data.data.result);
                     // Store the result data for display
                     heatmapResult.value = data.data.result;
                     // Show success flash message
                     router.flash('message', 'Heatmap processing completed!');
                 } else if (status === 'Failed') {
-                    console.error('❌ FAILURE: Heatmap processing failed');
-                    console.error('Failure details:', data);
                     router.flash('error', 'Heatmap processing failed.');
                 }
                 
                 stopPolling();
-            } else {
-                console.log('⏳ CONTINUING: Heatmap still processing, will poll again...');
             }
         },
         onHttpException: (response: any) => {
-            console.error('❌ FAILURE: HTTP error while checking heatmap status');
-            console.error('HTTP Status:', response.status);
-            console.error('Response data:', response.data);
+            console.error('HTTP Error:', response.status);
             router.flash('error', 'Failed to check heatmap status.');
             stopPolling(); // IMPORTANT: stop polling if there is a server error!
         },
         onNetworkError: (error: any) => {
-            console.error('❌ FAILURE: Network error while checking heatmap status');
             console.error('Network error:', error.message);
             router.flash('error', 'Network error while checking heatmap status.');
             stopPolling(); // IMPORTANT: stop polling if there is a network error!
@@ -143,6 +110,28 @@ const stopPolling = () => {
 onUnmounted(() => {
     stopPolling();
 });
+
+const runHeatAnalysis = () => {
+    isRunningAnalysis.value = true;
+    
+    heatAnalysisHttp.post('/parks/run-heat-analysis', {
+        onSuccess: (data: any) => {
+            heatAnalysisResults.value = data.ranked_parks;
+            router.flash('message', 'Park heat analysis completed successfully!');
+        },
+        onHttpException: (response: any) => {
+            console.error('HTTP Error:', response.status);
+            router.flash('error', response.data?.error || 'Failed to run heat analysis');
+        },
+        onNetworkError: (error: any) => {
+            console.error('Network error:', error.message);
+            router.flash('error', 'Network error while running heat analysis');
+        },
+        onFinish: () => {
+            isRunningAnalysis.value = false;
+        }
+    });
+};
 
 defineOptions({
     layout: {
@@ -182,6 +171,17 @@ defineOptions({
             />
         </div>
 
+        <!-- Run Analysis Button -->
+        <div class="bg-white border border-sidebar-border/70 rounded-xl p-6 dark:border-sidebar-border">
+            <button 
+                @click="runHeatAnalysis"
+                :disabled="isRunningAnalysis"
+                class="bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 text-white px-6 py-3 rounded-lg font-medium w-full"
+            >
+                {{ isRunningAnalysis ? 'Running Analysis...' : 'Run Park Heat Analysis' }}
+            </button>
+        </div>
+
         <!-- Heatmap Result Card -->
         <div v-if="heatmapResult" class="bg-white border border-sidebar-border/70 rounded-xl p-6 dark:border-sidebar-border">
             <h3 class="text-lg font-semibold mb-4">Heatmap Results</h3>
@@ -193,6 +193,32 @@ defineOptions({
                 <div>
                     <h4 class="font-medium text-sm text-gray-500 mb-2">Stats Data</h4>
                     <pre class="bg-gray-100 p-3 rounded text-xs overflow-auto max-h-40">{{ JSON.stringify(heatmapResult.stats_data, null, 2) }}</pre>
+                </div>
+            </div>
+        </div>
+
+        <!-- Park Heat Analysis Results -->
+        <div v-if="heatAnalysisResults" class="bg-white border border-sidebar-border/70 rounded-xl p-6 dark:border-sidebar-border">
+            <h3 class="text-lg font-semibold mb-4">Top 10 Hottest Parks</h3>
+            <div class="space-y-3">
+                <div 
+                    v-for="(item, index) in heatAnalysisResults" 
+                    :key="item.id"
+                    class="flex items-center justify-between p-4 bg-gray-50 rounded-lg"
+                >
+                    <div class="flex items-center gap-4">
+                        <span class="text-2xl font-bold text-blue-600">{{ index + 1 }}</span>
+                        <div>
+                            <h4 class="font-medium">{{ item.park?.name || 'Unknown Park' }}</h4>
+                            <p class="text-sm text-gray-500">{{ item.matched_tile_count }} tiles analyzed</p>
+                        </div>
+                    </div>
+                    <div class="text-right">
+                        <div class="text-2xl font-bold text-red-600">{{ item.average_temperature }}°C</div>
+                        <div class="text-sm text-gray-500">
+                            Min: {{ item.min_temperature }}°C | Max: {{ item.max_temperature }}°C
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>

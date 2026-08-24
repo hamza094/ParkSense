@@ -5,6 +5,7 @@ namespace Database\Seeders;
 use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use App\Models\Park;
 use Illuminate\Database\Seeder;
+use MatanYadaev\EloquentSpatial\Objects\Geometry;
 
 class ParksSeeder extends Seeder
 {
@@ -66,10 +67,26 @@ class ParksSeeder extends Seeder
                         $properties['RECREATION_COMMUNITY_CENTER'] ?? null
                     ),
 
-                    'geometry' => isset($feature['geometry']) ? json_encode($feature['geometry']) : null,
+                    'geometry' => $this->parseGeometry($feature['geometry'] ?? null),
                 ]
             );
         }
+    }
+
+    private function parseGeometry(?array $geometry): ?Geometry
+    {
+        if ($geometry === null) {
+            return null;
+        }
+
+        $type = $geometry['type'] ?? null;
+        $geoJson = json_encode($geometry);
+
+        return match ($type) {
+            'Polygon' => \MatanYadaev\EloquentSpatial\Objects\Polygon::fromJson($geoJson),
+            'MultiPolygon' => \MatanYadaev\EloquentSpatial\Objects\MultiPolygon::fromJson($geoJson),
+            default => null,
+        };
     }
 
     private function toNullableBoolean(mixed $value): ?bool
