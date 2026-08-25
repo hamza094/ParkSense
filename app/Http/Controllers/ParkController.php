@@ -8,6 +8,7 @@ use App\Models\ParkHeatAnalysis;
 use App\Actions\SendFortyGuardHeatmapRequest;
 use App\Actions\ManageHeatmapAnalysis;
 use App\Services\ParkHeatAnalysisService;
+use App\Services\FortyGuard\FortyGuardClient;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\DB;
@@ -25,8 +26,61 @@ class ParkController extends Controller
     {
         $parks = Park::all();
 
+        // Get the latest completed heat analysis results from database
+        $latestHeatAnalysis = ParkHeatAnalysis::query()
+            ->whereHas('heatmapAnalysis', function ($query) {
+                $query->where('status', 'Completed');
+            })
+            ->with('park')
+            ->orderByDesc('average_temperature')
+            ->limit(3)
+            ->get();
+
+        // Get the latest completed heatmap result
+        $latestHeatmap = HeatmapAnalysis::query()
+            ->where('status', 'Completed')
+            ->select(['id', 'map_data', 'stats_data', 'created_at'])
+            ->orderByDesc('created_at')
+            ->first();
+
+        $heatmapResult = null;
+        if ($latestHeatmap) {
+            $heatmapResult = [
+                'map_data' => $latestHeatmap->map_data,
+                'stats_data' => $latestHeatmap->stats_data,
+            ];
+        }
+
+        // Get completed environmental results for the latest heatmap
+        $environmentalResults = [];
+        if ($latestHeatmap) {
+            $environmentalMetrics = \App\Models\EnvironmentalMetric::query()
+                ->where('heatmap_analysis_id', $latestHeatmap->id)
+                ->where('status', 'completed')
+                ->with(['park', 'heatmapAnalysis'])
+                ->get();
+
+            foreach ($environmentalMetrics as $metric) {
+                // Get the average temperature from heat analysis
+                $parkHeatAnalysis = ParkHeatAnalysis::query()
+                    ->where('park_id', $metric->park_id)
+                    ->where('heatmap_analysis_id', $metric->heatmap_analysis_id)
+                    ->first();
+
+                $environmentalResults[] = [
+                    'park_id' => $metric->park_id,
+                    'park_name' => $metric->park->name,
+                    'average_temperature' => $parkHeatAnalysis ? $parkHeatAnalysis->average_temperature : null,
+                    'environmental_data' => $metric->data,
+                ];
+            }
+        }
+
         return Inertia::render('Dashboard', [
             'parks' => $parks,
+            'heatAnalysisResults' => $latestHeatAnalysis,
+            'heatmapResult' => $heatmapResult,
+            'environmentalResults' => $environmentalResults,
         ]);
     }
 
@@ -166,50 +220,37 @@ class ParkController extends Controller
     /**
      * Check heatmap processing status
      */
-    public function checkHeatmapStatus(Request $request, string $activityId)
+    public function checkHeatmapStatus(string $activityId)
     {
+        $cacheKey = 'heatmap_result_' . $activityId;
+        
+        // Check if result is already cached
+        $cachedResult = cache()->get($cacheKey);
+        if ($cachedResult) {
+            return response()->json($cachedResult);
+        }
+        
         try {
-            // Check cache first for completed results
-            $cacheKey = 'heatmap_result_' . $activityId;
-            $cachedResult = cache()->get($cacheKey);
-            
-            if ($cachedResult) {
-                return response()->json($cachedResult);
-            }
-            
-            $response = Http::timeout(30)
-                ->withHeaders([
-                    'api-key' => config('services.fortyguard.key'),
-                ])
-                ->get(config('services.fortyguard.url') . '/status/' . $activityId);
-            
-            if ($response->failed()) {
-                return response()->json([
-                    'error' => 'Failed to check status',
-                    'status' => $response->status(),
-                    'message' => $response->body(),
-                ], $response->status());
-            }
-            
-            $responseData = $response->json();
+            $fortyGuard = new FortyGuardClient();
+            $response = $fortyGuard->getStatus($activityId);
             
             // Update heatmap analysis record if status is Completed using action class
-            if ($responseData['data']['status'] === 'Completed') {
+            if ($response['data']['status'] === 'Completed') {
                 $manageHeatmap = new ManageHeatmapAnalysis();
-                $manageHeatmap->markAsCompleted($activityId, $responseData['data']);
+                $manageHeatmap->markAsCompleted($activityId, $response['data']);
             }
             
-            if ($responseData['data']['status'] === 'Completed' || $responseData['data']['status'] === 'Failed') {
+            if ($response['data']['status'] === 'Completed' || $response['data']['status'] === 'Failed') {
                 // Cache the result for 24 hours
-                cache()->put($cacheKey, $responseData, now()->addHours(24));
+                cache()->put($cacheKey, $response, now()->addHours(24));
                 
                 // Cache the latest activity_id for heat analysis (user-scoped)
-                if ($responseData['data']['status'] === 'Completed') {
+                if ($response['data']['status'] === 'Completed') {
                     cache()->put('latest_heatmap_activity_id_' . auth()->id(), $activityId, now()->addHours(24));
                 }
             }
             
-            return response()->json($responseData);
+            return response()->json($response);
         } catch (\Exception $e) {
             return response()->json([
                 'error' => 'Failed to check heatmap status',
@@ -301,7 +342,7 @@ class ParkController extends Controller
             }
 
             // Get ranked results
-            $rankedParks = $service->rankParksByTemperature($analysis, 10);
+            $rankedParks = $service->rankParksByTemperature($analysis, 3);
 
             return response()->json([
                 'success' => true,

@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\ParkController;
+use App\Http\Controllers\EnvironmentalAnalysisController;
 use Illuminate\Support\Facades\Route;
 
 Route::inertia('/', 'Welcome')->name('home');
@@ -11,6 +12,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('parks/heatmap-status/{activityId}', [ParkController::class, 'checkHeatmapStatus'])->name('parks.heatmap-status');
     Route::get('parks/heatmap-cache/{activityId}', [ParkController::class, 'getCachedHeatmapResult'])->name('parks.heatmap-cache');
     Route::post('parks/run-heat-analysis', [ParkController::class, 'runHeatAnalysis'])->name('parks.run-heat-analysis');
+    Route::post('environmental/run-analysis', [EnvironmentalAnalysisController::class, 'runEnvironmentalAnalysis'])->name('environmental.run-analysis');
+    Route::get('environmental/status/{activityId}', [EnvironmentalAnalysisController::class, 'checkEnvironmentalStatus'])->name('environmental.status');
 });
 
 require __DIR__.'/settings.php';
