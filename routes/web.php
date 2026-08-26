@@ -3,6 +3,7 @@
 use App\Http\Controllers\ParkController;
 use App\Http\Controllers\EnvironmentalAnalysisController;
 use App\Http\Controllers\SatelliteAnalysisController;
+use App\Http\Controllers\ParkPriorityScoreController;
 use Illuminate\Support\Facades\Route;
 
 Route::inertia('/', 'Welcome')->name('home');
@@ -17,6 +18,11 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('environmental/status/{activityId}', [EnvironmentalAnalysisController::class, 'checkEnvironmentalStatus'])->name('environmental.status');
     Route::post('satellite/run-analysis', [SatelliteAnalysisController::class, 'runSatelliteAnalysis'])->name('satellite.run-analysis');
     Route::get('satellite/status/{activityId}', [SatelliteAnalysisController::class, 'checkSatelliteStatus'])->name('satellite.status');
+
+    // Priority scoring routes
+    Route::post('priority-scores/calculate/{heatmapAnalysisId}', [ParkPriorityScoreController::class, 'calculate'])->name('priority-scores.calculate');
+    Route::get('priority-scores/{heatmapAnalysisId}', [ParkPriorityScoreController::class, 'index'])->name('priority-scores.index');
+    Route::get('priority-scores/show/{id}', [ParkPriorityScoreController::class, 'show'])->name('priority-scores.show');
 });
 
 require __DIR__.'/settings.php';

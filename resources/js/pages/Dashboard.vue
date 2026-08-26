@@ -8,6 +8,7 @@ import HeatmapResultsCard from '@/components/dashboard/HeatmapResultsCard.vue';
 import HeatAnalysisResultsCard from '@/components/dashboard/HeatAnalysisResultsCard.vue';
 import EnvironmentalResultsCard from '@/components/dashboard/EnvironmentalResultsCard.vue';
 import SatelliteResultsCard from '@/components/dashboard/SatelliteResultsCard.vue';
+import PriorityScoreCard from '@/components/dashboard/PriorityScoreCard.vue';
 import AnalysisButtons from '@/components/dashboard/AnalysisButtons.vue';
 import { dashboard } from '@/routes';
 import { useHeatmapPolling } from '@/composables/useHeatmapPolling';
@@ -16,6 +17,7 @@ import { useSatellitePolling } from '@/composables/useSatellitePolling';
 import { useHeatAnalysis } from '@/composables/useHeatAnalysis';
 import { useEnvironmentalAnalysis } from '@/composables/useEnvironmentalAnalysis';
 import { useSatelliteAnalysis } from '@/composables/useSatelliteAnalysis';
+import { usePriorityScoring } from '@/composables/usePriorityScoring';
 
 const googleMapsApiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY || '';
 const page = usePage<any>();
@@ -36,6 +38,7 @@ const props = defineProps<{
     heatmapResult?: any;
     environmentalResults?: any[];
     satelliteResults?: any[];
+    priorityScores?: any[];
 }>();
 
 const parksData = ref(props.parks);
@@ -58,6 +61,9 @@ const { isRunningEnvironmentalAnalysis, runEnvironmentalAnalysis } = useEnvironm
 // Satellite analysis
 const { isRunningSatelliteAnalysis, runSatelliteAnalysis } = useSatelliteAnalysis();
 
+// Priority scoring
+const { isRunningPriorityScoring, priorityScores, calculatePriorityScores } = usePriorityScoring(props.priorityScores);
+
 const handleRunEnvironmentalAnalysis = () => {
     runEnvironmentalAnalysis((submissions: any[]) => {
         environmentalSubmissions.value = submissions;
@@ -74,6 +80,29 @@ const handleRunSatelliteAnalysis = () => {
             startSatellitePolling(submission.activity_id, submission.park_id);
         });
     }, heatAnalysisResults.value);
+};
+
+const handleRunPriorityScoring = async () => {
+    let heatmapAnalysisId = heatmapResult.value?.id;
+    
+    // If no heatmapResult, try to get ID from heat analysis results
+    if (!heatmapAnalysisId && heatAnalysisResults.value && heatAnalysisResults.value.length > 0) {
+        heatmapAnalysisId = heatAnalysisResults.value[0]?.heatmap_analysis_id;
+    }
+    
+    if (!heatmapAnalysisId) {
+        alert('Please run heatmap analysis first');
+        return;
+    }
+    if (!heatAnalysisResults.value || heatAnalysisResults.value.length === 0) {
+        alert('Please run heat analysis first');
+        return;
+    }
+    try {
+        await calculatePriorityScores(heatmapAnalysisId);
+    } catch (err) {
+        console.error('Priority scoring failed:', err);
+    }
 };
 
 defineOptions({
@@ -119,10 +148,13 @@ defineOptions({
             :is-running-analysis="isRunningAnalysis"
             :is-running-environmental-analysis="isRunningEnvironmentalAnalysis"
             :is-running-satellite-analysis="isRunningSatelliteAnalysis"
+            :is-running-priority-scoring="isRunningPriorityScoring"
             :has-heat-analysis-results="!!heatAnalysisResults"
+            :has-priority-scores="!!priorityScores && priorityScores.length > 0"
             @run-heat-analysis="runHeatAnalysis"
             @run-environmental-analysis="handleRunEnvironmentalAnalysis"
             @run-satellite-analysis="handleRunSatelliteAnalysis"
+            @run-priority-scoring="handleRunPriorityScoring"
         />
 
         <!-- Heatmap Result Card -->
@@ -137,6 +169,9 @@ defineOptions({
         <!-- Satellite Analysis Results -->
         <SatelliteResultsCard :satellite-results="satelliteResults" />
 
+        <!-- Priority Scores -->
+        <PriorityScoreCard :priority-scores="priorityScores" />
+
         <!-- Processing Status -->
         <div v-if="currentActivityId && !heatmapResult" class="flex items-center gap-3 bg-blue-50 border border-blue-200 text-blue-700 px-4 py-4 rounded-lg shadow-sm">
             <svg class="animate-spin h-5 w-5 text-blue-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
@@ -147,3 +182,4 @@ defineOptions({
         </div>
     </div>
 </template>
+

@@ -3,13 +3,16 @@ defineProps<{
     isRunningAnalysis: boolean;
     isRunningEnvironmentalAnalysis: boolean;
     isRunningSatelliteAnalysis: boolean;
+    isRunningPriorityScoring: boolean;
     hasHeatAnalysisResults: boolean;
+    hasPriorityScores: boolean;
 }>();
 
 const emit = defineEmits<{
     runHeatAnalysis: [];
     runEnvironmentalAnalysis: [];
     runSatelliteAnalysis: [];
+    runPriorityScoring: [];
 }>();
 </script>
 
@@ -32,9 +35,16 @@ const emit = defineEmits<{
         <button 
             @click="emit('runSatelliteAnalysis')"
             :disabled="isRunningSatelliteAnalysis || !hasHeatAnalysisResults"
-            class="bg-purple-600 hover:bg-purple-700 disabled:bg-gray-400 text-white px-6 py-3 rounded-lg font-medium w-full"
+            class="bg-purple-600 hover:bg-purple-700 disabled:bg-gray-400 text-white px-6 py-3 rounded-lg font-medium w-full mb-3"
         >
             {{ isRunningSatelliteAnalysis ? 'Running Satellite Analysis...' : 'Get Satellite Segmentation' }}
+        </button>
+        <button 
+            @click="emit('runPriorityScoring')"
+            :disabled="isRunningPriorityScoring || !hasHeatAnalysisResults"
+            class="bg-orange-600 hover:bg-orange-700 disabled:bg-gray-400 text-white px-6 py-3 rounded-lg font-medium w-full"
+        >
+            {{ isRunningPriorityScoring ? 'Calculating Priority Scores...' : 'Calculate Priority Scores' }}
         </button>
     </div>
 </template>

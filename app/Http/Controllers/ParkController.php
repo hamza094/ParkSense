@@ -89,12 +89,38 @@ class ParkController extends Controller
             }
         }
 
+        // Get priority scores for the latest heatmap
+        $priorityScores = [];
+        if ($latestHeatmap) {
+            $scores = \App\Models\ParkPriorityScore::query()
+                ->where('heatmap_analysis_id', $latestHeatmap->id)
+                ->with(['park'])
+                ->orderByDesc('priority_score')
+                ->get();
+
+            foreach ($scores as $score) {
+                $priorityScores[] = [
+                    'id' => $score->id,
+                    'park_id' => $score->park_id,
+                    'park_name' => $score->park->name,
+                    'priority_score' => $score->priority_score,
+                    'heat_severity' => $score->heat_severity,
+                    'environmental_stress' => $score->environmental_stress,
+                    'physical_condition' => $score->physical_condition,
+                    'park_importance' => $score->park_importance,
+                    'intervention_opportunity' => $score->intervention_opportunity,
+                    'model_version' => $score->model_version,
+                ];
+            }
+        }
+
         return Inertia::render('Dashboard', [
             'parks' => $parks,
             'heatAnalysisResults' => $latestHeatAnalysis,
             'heatmapResult' => $heatmapResult,
             'environmentalResults' => $environmentalResults,
             'satelliteResults' => $satelliteResults,
+            'priorityScores' => $priorityScores,
         ]);
     }
 
