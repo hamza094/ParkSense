@@ -60,4 +60,44 @@ class FortyGuardClient
 
         return $response->json();
     }
+
+    public function satellite(
+        float $latitude,
+        float $longitude,
+        string $startDate,
+        string $startTime,
+        int $filterType,
+        int $granularity,
+        ?string $endTime = null
+    ): array {
+        $dateTime = [
+            'start_date' => $startDate,
+            'start_time' => $startTime,
+            'filter_type' => $filterType,
+        ];
+
+        if ($filterType === 2 && $endTime) {
+            $dateTime['end_time'] = $endTime;
+        }
+
+        $response = Http::withHeaders([
+            'api-key' => config('services.fortyguard.key'),
+        ])
+            ->acceptJson()
+            ->post(
+                config('services.fortyguard.url') . '/satellite',
+                [
+                    'sat' => [
+                        'latitude' => $latitude,
+                        'longitude' => $longitude,
+                    ],
+                    'date_time' => $dateTime,
+                    'granularity' => $granularity,
+                ]
+            );
+
+        $response->throw();
+
+        return $response->json();
+    }
 }

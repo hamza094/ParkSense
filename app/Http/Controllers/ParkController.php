@@ -57,21 +57,34 @@ class ParkController extends Controller
             $environmentalMetrics = \App\Models\EnvironmentalMetric::query()
                 ->where('heatmap_analysis_id', $latestHeatmap->id)
                 ->where('status', 'completed')
-                ->with(['park', 'heatmapAnalysis'])
+                ->with(['park', 'heatmapAnalysis', 'parkHeatAnalysis'])
                 ->get();
 
             foreach ($environmentalMetrics as $metric) {
-                // Get the average temperature from heat analysis
-                $parkHeatAnalysis = ParkHeatAnalysis::query()
-                    ->where('park_id', $metric->park_id)
-                    ->where('heatmap_analysis_id', $metric->heatmap_analysis_id)
-                    ->first();
-
                 $environmentalResults[] = [
                     'park_id' => $metric->park_id,
                     'park_name' => $metric->park->name,
-                    'average_temperature' => $parkHeatAnalysis ? $parkHeatAnalysis->average_temperature : null,
+                    'average_temperature' => $metric->parkHeatAnalysis ? $metric->parkHeatAnalysis->average_temperature : null,
                     'environmental_data' => $metric->data,
+                ];
+            }
+        }
+
+        // Get completed satellite results for the latest heatmap
+        $satelliteResults = [];
+        if ($latestHeatmap) {
+            $satelliteMetrics = \App\Models\SatelliteMetric::query()
+                ->where('heatmap_analysis_id', $latestHeatmap->id)
+                ->where('status', 'completed')
+                ->with(['park', 'heatmapAnalysis', 'parkHeatAnalysis'])
+                ->get();
+
+            foreach ($satelliteMetrics as $metric) {
+                $satelliteResults[] = [
+                    'park_id' => $metric->park_id,
+                    'park_name' => $metric->park->name,
+                    'average_temperature' => $metric->parkHeatAnalysis ? $metric->parkHeatAnalysis->average_temperature : null,
+                    'satellite_data' => $metric->data,
                 ];
             }
         }
@@ -81,6 +94,7 @@ class ParkController extends Controller
             'heatAnalysisResults' => $latestHeatAnalysis,
             'heatmapResult' => $heatmapResult,
             'environmentalResults' => $environmentalResults,
+            'satelliteResults' => $satelliteResults,
         ]);
     }
 

@@ -4,7 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 
-class EnvironmentalMetric extends Model
+class SatelliteMetric extends Model
 {
     protected $fillable = [
         'park_id',

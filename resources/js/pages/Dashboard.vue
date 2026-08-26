@@ -7,12 +7,15 @@ import GoogleMap from '@/components/GoogleMap.vue';
 import HeatmapResultsCard from '@/components/dashboard/HeatmapResultsCard.vue';
 import HeatAnalysisResultsCard from '@/components/dashboard/HeatAnalysisResultsCard.vue';
 import EnvironmentalResultsCard from '@/components/dashboard/EnvironmentalResultsCard.vue';
+import SatelliteResultsCard from '@/components/dashboard/SatelliteResultsCard.vue';
 import AnalysisButtons from '@/components/dashboard/AnalysisButtons.vue';
 import { dashboard } from '@/routes';
 import { useHeatmapPolling } from '@/composables/useHeatmapPolling';
 import { useEnvironmentalPolling } from '@/composables/useEnvironmentalPolling';
+import { useSatellitePolling } from '@/composables/useSatellitePolling';
 import { useHeatAnalysis } from '@/composables/useHeatAnalysis';
 import { useEnvironmentalAnalysis } from '@/composables/useEnvironmentalAnalysis';
+import { useSatelliteAnalysis } from '@/composables/useSatelliteAnalysis';
 
 const googleMapsApiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY || '';
 const page = usePage<any>();
@@ -32,6 +35,7 @@ const props = defineProps<{
     heatAnalysisResults?: any[];
     heatmapResult?: any;
     environmentalResults?: any[];
+    satelliteResults?: any[];
 }>();
 
 const parksData = ref(props.parks);
@@ -45,14 +49,29 @@ const { heatAnalysisResults, isRunningAnalysis, runHeatAnalysis } = useHeatAnaly
 // Environmental polling - initialize with prop if available
 const { environmentalResults, environmentalSubmissions, startEnvironmentalPolling } = useEnvironmentalPolling(props.environmentalResults);
 
+// Satellite polling - initialize with prop if available
+const { satelliteResults, satelliteSubmissions, startSatellitePolling } = useSatellitePolling(props.satelliteResults);
+
 // Environmental analysis
 const { isRunningEnvironmentalAnalysis, runEnvironmentalAnalysis } = useEnvironmentalAnalysis();
+
+// Satellite analysis
+const { isRunningSatelliteAnalysis, runSatelliteAnalysis } = useSatelliteAnalysis();
 
 const handleRunEnvironmentalAnalysis = () => {
     runEnvironmentalAnalysis((submissions: any[]) => {
         environmentalSubmissions.value = submissions;
         submissions.forEach((submission: any) => {
             startEnvironmentalPolling(submission.activity_id, submission.park_id);
+        });
+    }, heatAnalysisResults.value);
+};
+
+const handleRunSatelliteAnalysis = () => {
+    runSatelliteAnalysis((submissions: any[]) => {
+        satelliteSubmissions.value = submissions;
+        submissions.forEach((submission: any) => {
+            startSatellitePolling(submission.activity_id, submission.park_id);
         });
     }, heatAnalysisResults.value);
 };
@@ -99,9 +118,11 @@ defineOptions({
         <AnalysisButtons
             :is-running-analysis="isRunningAnalysis"
             :is-running-environmental-analysis="isRunningEnvironmentalAnalysis"
+            :is-running-satellite-analysis="isRunningSatelliteAnalysis"
             :has-heat-analysis-results="!!heatAnalysisResults"
             @run-heat-analysis="runHeatAnalysis"
             @run-environmental-analysis="handleRunEnvironmentalAnalysis"
+            @run-satellite-analysis="handleRunSatelliteAnalysis"
         />
 
         <!-- Heatmap Result Card -->
@@ -112,6 +133,9 @@ defineOptions({
 
         <!-- Environmental Analysis Results -->
         <EnvironmentalResultsCard :environmental-results="environmentalResults" />
+
+        <!-- Satellite Analysis Results -->
+        <SatelliteResultsCard :satellite-results="satelliteResults" />
 
         <!-- Processing Status -->
         <div v-if="currentActivityId && !heatmapResult" class="flex items-center gap-3 bg-blue-50 border border-blue-200 text-blue-700 px-4 py-4 rounded-lg shadow-sm">

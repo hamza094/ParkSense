@@ -1,0 +1,139 @@
+<?php
+
+namespace App\Services;
+
+use App\Models\SatelliteMetric;
+use App\Models\HeatmapAnalysis;
+use App\Models\Park;
+use App\Models\ParkHeatAnalysis;
+use App\Services\FortyGuard\FortyGuardClient;
+
+class SatelliteAnalysisService
+{
+    public function __construct(
+        private FortyGuardClient $fortyGuard
+    ) {}
+
+    public function submitAnalysis(Park $park, string $startDate, string $startTime, int $filterType, int $granularity, string $endTime = '22:00'): string
+    {
+        $response = $this->fortyGuard->satellite(
+            latitude: $park->latitude,
+            longitude: $park->longitude,
+            startDate: $startDate,
+            startTime: $startTime,
+            filterType: $filterType,
+            granularity: $granularity,
+            endTime: $endTime,
+        );
+
+        return $response['data']['activity_id'];
+    }
+
+    public function checkStatus(string $activityId): array
+    {
+        return $this->fortyGuard->getStatus($activityId);
+    }
+
+    public function saveResultByActivityId(string $activityId, array $result): SatelliteMetric
+    {
+        $metric = SatelliteMetric::where('activity_id', $activityId)->first();
+        
+        if (!$metric) {
+            throw new \Exception("Satellite metric not found for activity_id: {$activityId}");
+        }
+
+        $metric->status = 'completed';
+        $metric->data = $result;
+        $metric->save();
+
+        return $metric;
+    }
+
+    public function markAsFailed(string $activityId): SatelliteMetric
+    {
+        $metric = SatelliteMetric::where('activity_id', $activityId)->first();
+        
+        if (!$metric) {
+            throw new \Exception("Satellite metric not found for activity_id: {$activityId}");
+        }
+
+        $metric->status = 'failed';
+        $metric->save();
+
+        return $metric;
+    }
+
+    public function analyzeTopParks(int $limit): array
+    {
+        // Get the latest completed heatmap analysis from database
+        $analysis = HeatmapAnalysis::query()
+            ->where('status', 'Completed')
+            ->orderByDesc('created_at')
+            ->first();
+
+        if (!$analysis) {
+            throw new \Exception('No completed heatmap analysis found. Please run heat analysis first.');
+        }
+
+        // Check if satellite analysis already exists for this heatmap
+        $existingAnalysis = SatelliteMetric::query()
+            ->where('heatmap_analysis_id', $analysis->id)
+            ->where('status', 'pending')
+            ->exists();
+
+        if ($existingAnalysis) {
+            throw new \Exception('Satellite analysis is already in progress for this heatmap. Please wait for completion or check the results.');
+        }
+
+        $topParks = ParkHeatAnalysis::query()
+            ->where('heatmap_analysis_id', $analysis->id)
+            ->orderByDesc('average_temperature')
+            ->limit($limit)
+            ->with('park')
+            ->get();
+
+        if ($topParks->isEmpty()) {
+            throw new \Exception('No parks found in heat analysis');
+        }
+
+        $submissions = [];
+        $startDate = now()->subDays(7)->toDateString();
+        $startTime = '08:00';
+        $filterType = 2;
+        $granularity = 80; // Default granularity
+
+        foreach ($topParks as $parkAnalysis) {
+            $park = $parkAnalysis->park;
+            
+            if (!$park->latitude || !$park->longitude) {
+                continue;
+            }
+
+            $activityId = $this->submitAnalysis(
+                $park,
+                $startDate,
+                $startTime,
+                $filterType,
+                $granularity
+            );
+
+            // Create pending record in database to link activity_id with park and heatmap analysis
+            SatelliteMetric::create([
+                'park_id' => $park->id,
+                'heatmap_analysis_id' => $analysis->id,
+                'activity_id' => $activityId,
+                'status' => 'pending',
+                'data' => null, // Will be updated when analysis completes
+            ]);
+
+            $submissions[] = [
+                'park_id' => $park->id,
+                'park_name' => $park->name,
+                'average_temperature' => $parkAnalysis->average_temperature,
+                'activity_id' => $activityId,
+            ];
+        }
+
+        return $submissions;
+    }
+}

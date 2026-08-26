@@ -2,12 +2,14 @@
 defineProps<{
     isRunningAnalysis: boolean;
     isRunningEnvironmentalAnalysis: boolean;
+    isRunningSatelliteAnalysis: boolean;
     hasHeatAnalysisResults: boolean;
 }>();
 
 const emit = defineEmits<{
     runHeatAnalysis: [];
     runEnvironmentalAnalysis: [];
+    runSatelliteAnalysis: [];
 }>();
 </script>
 
@@ -23,9 +25,16 @@ const emit = defineEmits<{
         <button 
             @click="emit('runEnvironmentalAnalysis')"
             :disabled="isRunningEnvironmentalAnalysis || !hasHeatAnalysisResults"
-            class="bg-green-600 hover:bg-green-700 disabled:bg-gray-400 text-white px-6 py-3 rounded-lg font-medium w-full"
+            class="bg-green-600 hover:bg-green-700 disabled:bg-gray-400 text-white px-6 py-3 rounded-lg font-medium w-full mb-3"
         >
             {{ isRunningEnvironmentalAnalysis ? 'Running Environmental Analysis...' : 'Get Environmental Parameters' }}
+        </button>
+        <button 
+            @click="emit('runSatelliteAnalysis')"
+            :disabled="isRunningSatelliteAnalysis || !hasHeatAnalysisResults"
+            class="bg-purple-600 hover:bg-purple-700 disabled:bg-gray-400 text-white px-6 py-3 rounded-lg font-medium w-full"
+        >
+            {{ isRunningSatelliteAnalysis ? 'Running Satellite Analysis...' : 'Get Satellite Segmentation' }}
         </button>
     </div>
 </template>
