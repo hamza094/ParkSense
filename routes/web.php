@@ -4,6 +4,8 @@ use App\Http\Controllers\ParkController;
 use App\Http\Controllers\EnvironmentalAnalysisController;
 use App\Http\Controllers\SatelliteAnalysisController;
 use App\Http\Controllers\ParkPriorityScoreController;
+use App\Http\Controllers\InterventionController;
+use App\Http\Controllers\InvestmentController;
 use Illuminate\Support\Facades\Route;
 
 Route::inertia('/', 'Welcome')->name('home');
@@ -23,6 +25,12 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::post('priority-scores/calculate/{heatmapAnalysisId}', [ParkPriorityScoreController::class, 'calculate'])->name('priority-scores.calculate');
     Route::get('priority-scores/{heatmapAnalysisId}', [ParkPriorityScoreController::class, 'index'])->name('priority-scores.index');
     Route::get('priority-scores/show/{id}', [ParkPriorityScoreController::class, 'show'])->name('priority-scores.show');
+
+    // Intervention routes
+    Route::post('interventions/generate/{heatmapAnalysisId}', [InterventionController::class, 'generate'])->name('interventions.generate');
+
+    // Investment optimization routes
+    Route::post('investments/optimize/{heatmapAnalysisId}', [InvestmentController::class, 'optimize'])->name('investments.optimize');
 });
 
 require __DIR__.'/settings.php';

@@ -4,6 +4,7 @@ defineProps<{
     isRunningEnvironmentalAnalysis: boolean;
     isRunningSatelliteAnalysis: boolean;
     isRunningPriorityScoring: boolean;
+    isGeneratingRecommendations: boolean;
     hasHeatAnalysisResults: boolean;
     hasPriorityScores: boolean;
 }>();
@@ -13,6 +14,7 @@ const emit = defineEmits<{
     runEnvironmentalAnalysis: [];
     runSatelliteAnalysis: [];
     runPriorityScoring: [];
+    runInterventionRecommendations: [];
 }>();
 </script>
 
@@ -42,9 +44,16 @@ const emit = defineEmits<{
         <button 
             @click="emit('runPriorityScoring')"
             :disabled="isRunningPriorityScoring || !hasHeatAnalysisResults"
-            class="bg-orange-600 hover:bg-orange-700 disabled:bg-gray-400 text-white px-6 py-3 rounded-lg font-medium w-full"
+            class="bg-orange-600 hover:bg-orange-700 disabled:bg-gray-400 text-white px-6 py-3 rounded-lg font-medium w-full mb-3"
         >
             {{ isRunningPriorityScoring ? 'Calculating Priority Scores...' : 'Calculate Priority Scores' }}
+        </button>
+        <button 
+            @click="emit('runInterventionRecommendations')"
+            :disabled="isGeneratingRecommendations || !hasPriorityScores"
+            class="bg-teal-600 hover:bg-teal-700 disabled:bg-gray-400 text-white px-6 py-3 rounded-lg font-medium w-full"
+        >
+            {{ isGeneratingRecommendations ? 'Generating Recommendations...' : 'Generate Intervention Recommendations' }}
         </button>
     </div>
 </template>

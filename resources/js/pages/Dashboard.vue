@@ -9,6 +9,7 @@ import HeatAnalysisResultsCard from '@/components/dashboard/HeatAnalysisResultsC
 import EnvironmentalResultsCard from '@/components/dashboard/EnvironmentalResultsCard.vue';
 import SatelliteResultsCard from '@/components/dashboard/SatelliteResultsCard.vue';
 import PriorityScoreCard from '@/components/dashboard/PriorityScoreCard.vue';
+import InterventionRecommendationCard from '@/components/dashboard/InterventionRecommendationCard.vue';
 import AnalysisButtons from '@/components/dashboard/AnalysisButtons.vue';
 import { dashboard } from '@/routes';
 import { useHeatmapPolling } from '@/composables/useHeatmapPolling';
@@ -18,6 +19,10 @@ import { useHeatAnalysis } from '@/composables/useHeatAnalysis';
 import { useEnvironmentalAnalysis } from '@/composables/useEnvironmentalAnalysis';
 import { useSatelliteAnalysis } from '@/composables/useSatelliteAnalysis';
 import { usePriorityScoring } from '@/composables/usePriorityScoring';
+import { useInterventionRecommendations } from '@/composables/useInterventionRecommendations';
+import { useBudgetOptimization } from '@/composables/useBudgetOptimization';
+import BudgetInput from '@/components/dashboard/BudgetInput.vue';
+import InvestmentPlanCard from '@/components/dashboard/InvestmentPlanCard.vue';
 
 const googleMapsApiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY || '';
 const page = usePage<any>();
@@ -39,6 +44,8 @@ const props = defineProps<{
     environmentalResults?: any[];
     satelliteResults?: any[];
     priorityScores?: any[];
+    interventionRecommendations?: any[];
+    investmentPlan?: any;
 }>();
 
 const parksData = ref(props.parks);
@@ -63,6 +70,24 @@ const { isRunningSatelliteAnalysis, runSatelliteAnalysis } = useSatelliteAnalysi
 
 // Priority scoring
 const { isRunningPriorityScoring, priorityScores, calculatePriorityScores } = usePriorityScoring(props.priorityScores);
+
+// Intervention recommendations
+const { isGeneratingRecommendations, recommendations, generateRecommendations } = useInterventionRecommendations(props.interventionRecommendations);
+
+// Budget optimization
+const { loading: isOptimizingBudget, error: budgetError, result: optimizationResult, optimize: optimizeBudget } = useBudgetOptimization();
+
+// Initialize with prop if available (for page refresh)
+if (props.investmentPlan) {
+    optimizationResult.value = {
+        plan: props.investmentPlan,
+        selected_options: props.investmentPlan.items,
+        total_cost: props.investmentPlan.allocated_cost,
+        remaining_budget: props.investmentPlan.remaining_budget,
+        total_modeled_benefit: props.investmentPlan.total_modeled_benefit,
+        modeled_priority_coverage: props.investmentPlan.modeled_priority_coverage,
+    };
+}
 
 const handleRunEnvironmentalAnalysis = () => {
     runEnvironmentalAnalysis((submissions: any[]) => {
@@ -103,6 +128,44 @@ const handleRunPriorityScoring = async () => {
     } catch (err) {
         console.error('Priority scoring failed:', err);
     }
+};
+
+const handleRunInterventionRecommendations = async () => {
+    let heatmapAnalysisId = heatmapResult.value?.id;
+    
+    // If no heatmapResult, try to get ID from heat analysis results
+    if (!heatmapAnalysisId && heatAnalysisResults.value && heatAnalysisResults.value.length > 0) {
+        heatmapAnalysisId = heatAnalysisResults.value[0]?.heatmap_analysis_id;
+    }
+    
+    if (!heatmapAnalysisId) {
+        alert('Please run heatmap analysis first');
+        return;
+    }
+    if (!priorityScores.value || priorityScores.value.length === 0) {
+        alert('Please calculate priority scores first');
+        return;
+    }
+    try {
+        await generateRecommendations(heatmapAnalysisId);
+    } catch (err) {
+        console.error('Intervention recommendations failed:', err);
+    }
+};
+
+const handleBudgetOptimization = async (budget: number) => {
+    let heatmapAnalysisId = heatmapResult.value?.id;
+    
+    // If no heatmapResult, try to get ID from heat analysis results
+    if (!heatmapAnalysisId && heatAnalysisResults.value && heatAnalysisResults.value.length > 0) {
+        heatmapAnalysisId = heatAnalysisResults.value[0]?.heatmap_analysis_id;
+    }
+    
+    if (!heatmapAnalysisId) {
+        alert('Please run heatmap analysis first');
+        return;
+    }
+    await optimizeBudget(heatmapAnalysisId, budget);
 };
 
 defineOptions({
@@ -149,12 +212,14 @@ defineOptions({
             :is-running-environmental-analysis="isRunningEnvironmentalAnalysis"
             :is-running-satellite-analysis="isRunningSatelliteAnalysis"
             :is-running-priority-scoring="isRunningPriorityScoring"
+            :is-generating-recommendations="isGeneratingRecommendations"
             :has-heat-analysis-results="!!heatAnalysisResults"
             :has-priority-scores="!!priorityScores && priorityScores.length > 0"
             @run-heat-analysis="runHeatAnalysis"
             @run-environmental-analysis="handleRunEnvironmentalAnalysis"
             @run-satellite-analysis="handleRunSatelliteAnalysis"
             @run-priority-scoring="handleRunPriorityScoring"
+            @run-intervention-recommendations="handleRunInterventionRecommendations"
         />
 
         <!-- Heatmap Result Card -->
@@ -171,6 +236,29 @@ defineOptions({
 
         <!-- Priority Scores -->
         <PriorityScoreCard :priority-scores="priorityScores" />
+
+        <!-- Intervention Recommendations -->
+        <InterventionRecommendationCard :recommendations="recommendations" />
+
+        <!-- Budget Optimization -->
+        <BudgetInput 
+            @optimize="handleBudgetOptimization"
+            ref="budgetInputRef"
+        />
+
+        <!-- Investment Plan Results -->
+        <InvestmentPlanCard
+            v-if="optimizationResult"
+            :selected-options="optimizationResult.selected_options"
+            :total-cost="optimizationResult.total_cost"
+            :remaining-budget="optimizationResult.remaining_budget"
+            :coverage="optimizationResult.modeled_priority_coverage"
+        />
+
+        <!-- Budget Error -->
+        <div v-if="budgetError" class="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg">
+            {{ budgetError }}
+        </div>
 
         <!-- Processing Status -->
         <div v-if="currentActivityId && !heatmapResult" class="flex items-center gap-3 bg-blue-50 border border-blue-200 text-blue-700 px-4 py-4 rounded-lg shadow-sm">

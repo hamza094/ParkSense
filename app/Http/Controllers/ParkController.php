@@ -114,6 +114,75 @@ class ParkController extends Controller
             }
         }
 
+        // Get intervention recommendations for the latest heatmap
+        $interventionRecommendations = [];
+        if ($latestHeatmap) {
+            $recommendations = \App\Models\InterventionRecommendation::query()
+                ->where('heatmap_analysis_id', $latestHeatmap->id)
+                ->with(['park', 'priorityScore'])
+                ->get()
+                ->groupBy('park_id')
+                ->map(function ($items) {
+                    $first = $items->first();
+                    return [
+                        'park' => [
+                            'id' => $first->park_id,
+                            'name' => $first->park->name,
+                        ],
+                        'priority_score' => $first->priorityScore->priority_score,
+                        'recommendations' => $items->map(fn ($item) => [
+                            'id' => $item->id,
+                            'scenario' => $item->scenario,
+                            'name' => $item->intervention_name,
+                            'category' => $item->category,
+                            'quantity' => $item->quantity,
+                            'unit' => $item->unit,
+                            'upfront_cost' => $item->upfront_cost,
+                            'annual_maintenance_cost' => $item->annual_maintenance_cost,
+                            'annual_water_cost' => $item->annual_water_cost,
+                            'cost_basis' => $item->cost_basis,
+                            'source' => $item->source,
+                            'source_url' => $item->source_url,
+                            'rule' => $item->rule_matched,
+                            'justification' => $item->justification,
+                        ])->values(),
+                    ];
+                })
+                ->values();
+        }
+
+        // Get latest investment plan for the latest heatmap
+        $investmentPlan = null;
+        if ($latestHeatmap) {
+            $plan = \App\Models\InvestmentPlan::where('heatmap_analysis_id', $latestHeatmap->id)
+                ->with(['items.park'])
+                ->latest()
+                ->first();
+            
+            if ($plan) {
+                $investmentPlan = [
+                    'id' => $plan->id,
+                    'budget' => $plan->budget,
+                    'allocated_cost' => $plan->allocated_cost,
+                    'remaining_budget' => $plan->remaining_budget,
+                    'total_modeled_benefit' => $plan->total_modeled_benefit,
+                    'modeled_priority_coverage' => $plan->modeled_priority_coverage,
+                    'items' => $plan->items->map(function ($item) {
+                        return [
+                            'park_id' => $item->park_id,
+                            'park_name' => $item->park->name,
+                            'intervention_type' => $item->intervention_type,
+                            'scenario' => $item->scenario,
+                            'quantity' => $item->quantity,
+                            'unit' => $item->unit,
+                            'total_cost' => $item->total_cost,
+                            'modeled_benefit' => $item->modeled_benefit,
+                        ];
+                    })->values(),
+                ];
+            }
+        }
+
         return Inertia::render('Dashboard', [
             'parks' => $parks,
             'heatAnalysisResults' => $latestHeatAnalysis,
@@ -121,6 +190,8 @@ class ParkController extends Controller
             'environmentalResults' => $environmentalResults,
             'satelliteResults' => $satelliteResults,
             'priorityScores' => $priorityScores,
+            'interventionRecommendations' => $interventionRecommendations,
+            'investmentPlan' => $investmentPlan,
         ]);
     }
 
