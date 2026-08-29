@@ -139,6 +139,15 @@ const goBack = () => {
 const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString();
 };
+
+const formatEvidenceType = (evidenceType: string) => {
+    const typeMap: Record<string, string> = {
+        'research_reference': 'Research Reference',
+        'measured_reference': 'Measured Reference',
+        'planning_assumption': 'Planning Assumption',
+    };
+    return typeMap[evidenceType] || 'Unknown';
+};
 </script>
 
 <template>
@@ -452,6 +461,57 @@ const formatDate = (dateString: string) => {
                                 <div class="font-medium">{{ rec.name }}</div>
                                 <div class="text-muted-foreground">
                                     {{ rec.quantity }} {{ rec.unit }} • ${{ rec.upfront_cost?.toFixed(2) || 'N/A' }}
+                                </div>
+                                
+                                <!-- Intervention Scale (What ParkHeat Calculates) -->
+                                <div class="mt-1 p-1 bg-gray-50 dark:bg-gray-800 rounded border border-gray-200 dark:border-gray-700">
+                                    <div class="text-xs font-medium text-gray-700 dark:text-gray-300">Intervention Scale</div>
+                                    <div class="text-xs text-gray-600 dark:text-gray-400">
+                                        {{ rec.quantity }} {{ rec.unit }} (ParkHeat recommendation)
+                                    </div>
+                                </div>
+                                
+                                <!-- Cooling Benefit Evidence (What Phoenix Research Shows) -->
+                                <div v-if="rec.cooling_benefit" class="mt-1 p-2 bg-blue-50 dark:bg-blue-950 rounded border border-blue-200 dark:border-blue-800">
+                                    <div class="text-xs font-medium text-blue-900 dark:text-blue-100 mb-1">Phoenix Research Evidence</div>
+                                    
+                                    <!-- Evidence Scale -->
+                                    <div class="text-xs text-blue-800 dark:text-blue-200 mb-1 font-medium">
+                                        {{ rec.cooling_benefit.scale === 'neighborhood' ? '🏘️ Neighborhood-scale evidence' : '' }}
+                                        {{ rec.cooling_benefit.scale === 'local_shade' ? '🏗️ Local shade evidence' : '' }}
+                                        {{ rec.cooling_benefit.scale === 'treated_surface' ? '🛣️ Treated surface evidence' : '' }}
+                                    </div>
+                                    
+                                    <!-- Phoenix Research Reference -->
+                                    <div class="text-xs text-blue-800 dark:text-blue-200 mb-1">{{ rec.cooling_benefit.description }}</div>
+                                    
+                                    <!-- Evidence Type Badge -->
+                                    <div class="flex items-center gap-2 mb-1">
+                                        <span class="text-xs px-2 py-0.5 rounded-full bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300">
+                                            {{ formatEvidenceType(rec.cooling_benefit.evidence_type) }}
+                                        </span>
+                                        
+                                        <!-- Temperature Values -->
+                                        <span class="text-xs text-blue-600 dark:text-blue-400">
+                                            <span v-if="rec.cooling_benefit.value">
+                                                {{ rec.cooling_benefit.metric }}: {{ rec.cooling_benefit.value }}{{ rec.cooling_benefit.unit }}
+                                            </span>
+                                            <span v-else-if="rec.cooling_benefit.reference_10_percent_canopy_c">
+                                                {{ rec.cooling_benefit.metric }}: {{ rec.cooling_benefit.reference_10_percent_canopy_c }}°C - {{ rec.cooling_benefit.reference_25_percent_canopy_c }}°C
+                                            </span>
+                                            <span v-else-if="rec.cooling_benefit.air_temperature_c">
+                                                Air: {{ rec.cooling_benefit.air_temperature_c }}°C, Surface: {{ rec.cooling_benefit.surface_temperature_c }}°C, Radiant: {{ rec.cooling_benefit.radiant_temperature_c }}°C
+                                            </span>
+                                        </span>
+                                    </div>
+                                    
+                                    <!-- Source -->
+                                    <div class="text-xs text-blue-600 dark:text-blue-400">{{ rec.cooling_benefit.source }}</div>
+                                    
+                                    <!-- Important Note -->
+                                    <div class="text-xs text-blue-500 dark:text-blue-500 italic font-medium bg-blue-100 dark:bg-blue-900 p-1 rounded">
+                                        ⚠️ {{ rec.cooling_benefit.important_note }}
+                                    </div>
                                 </div>
                             </div>
                         </div>

@@ -24,6 +24,7 @@ class InterventionRecommendation extends Model
         'source_url',
         'rule_matched',
         'justification',
+        'cooling_benefit',
         'model_version',
     ];
 
@@ -31,7 +32,13 @@ class InterventionRecommendation extends Model
         'upfront_cost' => 'float',
         'annual_maintenance_cost' => 'float',
         'annual_water_cost' => 'float',
+        'cooling_benefit' => 'array',
     ];
+
+    public function getCoolingBenefitAttribute($value)
+    {
+        return $value ? json_decode($value, true) : null;
+    }
 
     public function park()
     {

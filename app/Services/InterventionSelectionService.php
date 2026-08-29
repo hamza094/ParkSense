@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Helpers\CoolingBenefitHelper;
 use App\Models\InterventionRecommendation;
 use App\Models\ParkPriorityScore;
 use Illuminate\Support\Collection;
@@ -297,6 +298,9 @@ class InterventionSelectionService
             $costBasis = $catalog['cost_basis'];
         }
 
+        // Get cooling benefit evidence from Phoenix research
+        $coolingBenefit = CoolingBenefitHelper::getCoolingBenefit($key);
+
         return InterventionRecommendation::updateOrCreate(
             [
                 'park_priority_score_id' => $score->id,
@@ -328,6 +332,8 @@ class InterventionSelectionService
 
                 'justification' =>
                     $justification,
+
+                'cooling_benefit' => $coolingBenefit ? json_encode($coolingBenefit) : null,
 
                 'model_version' =>
                     config(

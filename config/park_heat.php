@@ -1,11 +1,25 @@
 <?php
 
 return [
+    /*
+     * ParkHeat Priority Model v2
+     * 
+     * A configurable planning model calibrated for Phoenix summer conditions using:
+     * - Phoenix climate data (NWS Phoenix climate records/normals)
+     * - Phoenix heat-response framework (City of Phoenix Heat Response Plan)
+     * - Phoenix shade planning standards (Shade Phoenix Plan)
+     * - Phoenix park planning standards (Parks Standards and Service Area)
+     * - Thermal comfort references (ASHRAE Standard 55, CDC/NIOSH heat guidance)
+     * 
+     * IMPORTANT: Thresholds and weights are modeling parameters, not official City of Phoenix scoring standards.
+     * This model represents ParkHeat's evidence-informed approach to park heat mitigation prioritization.
+     */
 
     /*
      * Priority scoring weights.
      * Total must equal 1.0 (100%).
      * These weights determine how much each factor contributes to the final priority score.
+     * ParkHeat planning model weights - heat severity is dominant as it measures the primary problem.
      */
     'priority_weights' => [
         'heat_severity' => 0.40,
@@ -29,17 +43,19 @@ return [
 
     /*
      * Temperature thresholds for heat severity normalization.
+     * ParkHeat Priority Model v2 - calibrated for Phoenix summer conditions.
+     * Based on Phoenix climate data (NWS Phoenix 1991-2020 July normal high: 41.1°C).
      * Uses absolute scale instead of relative min/max to avoid micro-variation amplification.
-     * Based on Phoenix climate data and heat safety thresholds.
      */
     'temperature' => [
-        'low' => 25.0,  // Below this = minimal heat severity (0 score)
+        'low' => 30.0,  // Below this = minimal heat severity (0 score)
         'high' => 45.0, // Above this = maximum heat severity (100 score)
     ],
 
     /*
      * Environmental thresholds for normalization.
-     * These are application thresholds based on Phoenix climate data.
+     * ParkHeat Priority Model v2 - calibrated for Phoenix summer conditions.
+     * These are application thresholds based on Phoenix climate data and monsoon conditions.
      * Used to convert raw values to 0-100 scores.
      */
     'environmental' => [
@@ -53,11 +69,11 @@ return [
         ],
         'humidity' => [
             'low' => 10.0,
-            'high' => 30.0,
+            'high' => 40.0, // Extended to 40% to account for monsoon humidity spikes
         ],
         'solar_irradiance' => [
             'low' => 400.0,
-            'high' => 600.0,
+            'high' => 1000.0, // Extended to 1000 W/m² for better discrimination during peak solar exposure
         ],
     ],
 
@@ -109,6 +125,7 @@ return [
         'recreation_community_center' => 5,
         'shade_structures' => 5,
     ],
+];
 
     /*
      * Model version for tracking algorithm changes.
@@ -119,8 +136,12 @@ return [
 
     /*
      * Intervention catalog and recommendation rules.
-     * Rule-based system for recommending cooling actions based on park conditions.
-     * Costs are based on Phoenix municipal data sources for credibility.
+     * ParkHeat planning model with Phoenix-referenced costs.
+     * 
+     * Evidence Levels:
+     * 🟢 Phoenix verified: Costs from official Phoenix municipal documents
+     * 🟡 ParkHeat planning assumptions: Model parameters for optimization
+     * 🔵 FortyGuard measurements: Actual park condition data
      */
     'interventions' => [
         'catalog' => [
@@ -131,7 +152,7 @@ return [
                 'upfront_cost_per_unit' => 1050,
                 'annual_maintenance' => 100,
                 'annual_water' => 114.32,
-                'cost_note' => '$750 tree + labor + $300 irrigation supplies (Phoenix Shade Phoenix Plan)',
+                'cost_note' => 'Phoenix Shade Phoenix Plan estimate: $750 for a 24" box tree + labor + $300 irrigation supplies. Recurring references: $100/year maintenance + $114.32/year water.',
                 'source' => 'City of Phoenix Shade Phoenix Plan',
                 'source_url' => 'https://www.phoenix.gov/content/dam/phoenix/heatsite/documents/BP_ShadePhoenixPlan_Report_031025_EN.pdf',
             ],
@@ -141,8 +162,8 @@ return [
                 'unit' => 'ramada',
                 'min_cost' => 40000,
                 'max_cost' => 80000,
-                'planning_cost' => 60000, // Midpoint for budget optimization
-                'cost_note' => 'Phoenix Neighborhood Parks Enhancement Program range: $40,000-$80,000. ParkHeat planning value: $60,000 (midpoint)',
+                'planning_cost' => 60000, // ParkHeat optimization assumption (midpoint)
+                'cost_note' => 'Phoenix Neighborhood Parks Enhancement Program lists ramadas at $40,000-$80,000. ParkHeat uses the $60,000 midpoint for planning.',
                 'source' => 'City of Phoenix Parks',
                 'source_url' => 'https://www.phoenix.gov/administration/departments/parks/about-us/improvement-projects/neighborhood-parks-enhancement-program.html',
             ],
@@ -151,8 +172,9 @@ return [
                 'category' => 'surface',
                 'unit' => 'sqft',
                 'planning_cost_per_sqft' => 3.00,
-                'cost_basis' => 'Estimated planning scenario. Cost reference: Phoenix cool-pavement feasibility study (roadway, not park-specific). Treatment coverage: ParkHeat planning assumption (10% of hard surface)',
-                'source' => 'City of Phoenix',
+                'cost_basis' => 'ParkHeat planning estimate informed by Phoenix roadway context; not a Phoenix park-specific construction cost.',
+                'treatment_percent_of_hard_surface' => 10, // ParkHeat planning assumption
+                'source' => 'City of Phoenix roadway reference',
                 'source_url' => 'https://www.phoenix.gov/content/dam/phoenix/streetssite/documents/3rd%20st_lincoln%20st%20to%20washington%20st_design%20concept%20report.pdf',
             ],
         ],
@@ -160,26 +182,29 @@ return [
             'small' => [
                 'quantity' => 25,
                 'name' => 'Small',
+                'basis' => 'ParkHeat planning scenario',
             ],
             'medium' => [
                 'quantity' => 50,
                 'name' => 'Medium',
+                'basis' => 'ParkHeat planning scenario',
             ],
             'large' => [
                 'quantity' => 100,
                 'name' => 'Large',
+                'basis' => 'ParkHeat planning scenario',
             ],
         ],
         'tree_planning' => [
-            'phoenix_planting_standard_sqft' => 600, // Phoenix Landscape Standards: 1 tree per 600 sq ft
+            'phoenix_planting_standard_sqft' => 600, // Phoenix Landscape Standards: 1 tree per 600 sq ft of total landscape area, excluding sidewalks, plazas, play areas, sight visibility and active turf zones
             'citywide_canopy_goal_percent' => 25, // Phoenix 2030 canopy goal
         ],
         'rules' => [
             'tree_planting' => [
                 'priority' => 10,
                 'when' => [
-                    'heat_severity' => ['gte' => 50],
-                    'vegetation_percent' => ['lte' => 20],
+                    'heat_severity' => ['gte' => 50], // ParkHeat planning threshold
+                    'vegetation_percent' => ['lte' => 20], // ParkHeat planning threshold
                 ],
                 'package_selection' => [
                     'small' => [
@@ -202,20 +227,21 @@ return [
             'cool_pavement' => [
                 'priority' => 9,
                 'when' => [
-                    'heat_severity' => ['gte' => 50],
-                    'hard_surface_percent' => ['gte' => 50],
+                    'heat_severity' => ['gte' => 50], // ParkHeat planning threshold
+                    'hard_surface_percent' => ['gte' => 50], // ParkHeat planning threshold
                 ],
             ],
             'ramada' => [
                 'priority' => 8,
                 'when' => [
-                    'heat_severity' => ['gte' => 50],
+                    'heat_severity' => ['gte' => 50], // ParkHeat planning threshold
                     'playground' => ['bool' => true],
                     'shade_structures' => ['bool' => false],
                 ],
             ],
         ],
-        'max_recommendations_per_park' => 2,
-        'model_version' => 'v2', // Updated for Phoenix-verified costs
+        'max_recommendations_per_park' => 2, // ParkHeat planning assumption
+        'model_version' => 'v3', // Phoenix-referenced intervention planning model
+        'model_note' => 'Phoenix-referenced intervention planning model with verified costs for trees and ramadas, planning estimates for cool pavement and rule thresholds.',
     ],
 ];
