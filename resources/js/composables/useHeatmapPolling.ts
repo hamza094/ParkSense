@@ -36,7 +36,21 @@ export function useHeatmapPolling(initialResult: any = null) {
                 if (status === 'Completed' || status === 'Failed') {
                     if (status === 'Completed' && data?.data?.result) {
                         heatmapResult.value = data.data.result;
-                        router.flash('message', 'Heatmap processing completed!');
+                        
+                        // Navigate to heat analysis detail page if ID is available
+                        const heatmapAnalysisId = data?.data?.heatmap_analysis_id;
+                        if (heatmapAnalysisId) {
+                            router.flash('message', 'Heatmap processing completed! Redirecting to analysis detail...');
+                            setTimeout(() => {
+                                router.visit(`/heat-analyses/${heatmapAnalysisId}`);
+                            }, 1500);
+                        } else {
+                            // Fallback to reload if ID is not available
+                            router.flash('message', 'Heatmap processing completed! Reloading to show new analysis...');
+                            setTimeout(() => {
+                                router.reload();
+                            }, 1500);
+                        }
                     } else if (status === 'Failed') {
                         router.flash('error', 'Heatmap processing failed.');
                     }

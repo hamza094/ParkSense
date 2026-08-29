@@ -26,172 +26,48 @@ class ParkController extends Controller
     {
         $parks = Park::all();
 
-        // Get the latest completed heat analysis results from database
-        $latestHeatAnalysis = ParkHeatAnalysis::query()
-            ->whereHas('heatmapAnalysis', function ($query) {
-                $query->where('status', 'Completed');
-            })
-            ->with('park')
-            ->orderByDesc('average_temperature')
-            ->limit(3)
-            ->get();
+        // Get heat analyses summary list (simplified to avoid memory issues)
+        // Get latest IDs first without sorting large dataset
+        $latestIds = HeatmapAnalysis::query()
+            ->select('id')
+            ->orderByDesc('id')
+            ->limit(50)
+            ->pluck('id');
 
-        // Get the latest completed heatmap result
-        $latestHeatmap = HeatmapAnalysis::query()
-            ->where('status', 'Completed')
-            ->select(['id', 'map_data', 'stats_data', 'created_at'])
-            ->orderByDesc('created_at')
-            ->first();
+        $heatAnalyses = HeatmapAnalysis::query()
+            ->select(['id', 'park_ids', 'created_at', 'status'])
+            ->whereIn('id', $latestIds)
+            ->withCount('parkHeatAnalyses as tile_count')
+            ->get()
+            ->map(function ($analysis) {
+                // Get park name from park_ids array
+                $parkName = 'Multiple Parks';
+                $parkId = null;
+                if ($analysis->park_ids && is_array($analysis->park_ids) && count($analysis->park_ids) > 0) {
+                    $firstParkId = $analysis->park_ids[0];
+                    $park = Park::find($firstParkId);
+                    if ($park) {
+                        $parkId = $firstParkId;
+                        $parkName = $park->name;
+                        if (count($analysis->park_ids) > 1) {
+                            $parkName = $park->name . ' +' . (count($analysis->park_ids) - 1);
+                        }
+                    }
+                }
 
-        $heatmapResult = null;
-        if ($latestHeatmap) {
-            $heatmapResult = [
-                'map_data' => $latestHeatmap->map_data,
-                'stats_data' => $latestHeatmap->stats_data,
-            ];
-        }
-
-        // Get completed environmental results for the latest heatmap
-        $environmentalResults = [];
-        if ($latestHeatmap) {
-            $environmentalMetrics = \App\Models\EnvironmentalMetric::query()
-                ->where('heatmap_analysis_id', $latestHeatmap->id)
-                ->where('status', 'completed')
-                ->with(['park', 'heatmapAnalysis', 'parkHeatAnalysis'])
-                ->get();
-
-            foreach ($environmentalMetrics as $metric) {
-                $environmentalResults[] = [
-                    'park_id' => $metric->park_id,
-                    'park_name' => $metric->park->name,
-                    'average_temperature' => $metric->parkHeatAnalysis ? $metric->parkHeatAnalysis->average_temperature : null,
-                    'environmental_data' => $metric->data,
+                return [
+                    'id' => $analysis->id,
+                    'park_id' => $parkId,
+                    'park_name' => $parkName,
+                    'created_at' => $analysis->created_at->toISOString(),
+                    'status' => $analysis->status,
+                    'tile_count' => $analysis->tile_count ?? 0,
                 ];
-            }
-        }
-
-        // Get completed satellite results for the latest heatmap
-        $satelliteResults = [];
-        if ($latestHeatmap) {
-            $satelliteMetrics = \App\Models\SatelliteMetric::query()
-                ->where('heatmap_analysis_id', $latestHeatmap->id)
-                ->where('status', 'completed')
-                ->with(['park', 'heatmapAnalysis', 'parkHeatAnalysis'])
-                ->get();
-
-            foreach ($satelliteMetrics as $metric) {
-                $satelliteResults[] = [
-                    'park_id' => $metric->park_id,
-                    'park_name' => $metric->park->name,
-                    'average_temperature' => $metric->parkHeatAnalysis ? $metric->parkHeatAnalysis->average_temperature : null,
-                    'satellite_data' => $metric->data,
-                ];
-            }
-        }
-
-        // Get priority scores for the latest heatmap
-        $priorityScores = [];
-        if ($latestHeatmap) {
-            $scores = \App\Models\ParkPriorityScore::query()
-                ->where('heatmap_analysis_id', $latestHeatmap->id)
-                ->with(['park'])
-                ->orderByDesc('priority_score')
-                ->get();
-
-            foreach ($scores as $score) {
-                $priorityScores[] = [
-                    'id' => $score->id,
-                    'park_id' => $score->park_id,
-                    'park_name' => $score->park->name,
-                    'priority_score' => $score->priority_score,
-                    'heat_severity' => $score->heat_severity,
-                    'environmental_stress' => $score->environmental_stress,
-                    'physical_condition' => $score->physical_condition,
-                    'park_importance' => $score->park_importance,
-                    'intervention_opportunity' => $score->intervention_opportunity,
-                    'model_version' => $score->model_version,
-                ];
-            }
-        }
-
-        // Get intervention recommendations for the latest heatmap
-        $interventionRecommendations = [];
-        if ($latestHeatmap) {
-            $recommendations = \App\Models\InterventionRecommendation::query()
-                ->where('heatmap_analysis_id', $latestHeatmap->id)
-                ->with(['park', 'priorityScore'])
-                ->get()
-                ->groupBy('park_id')
-                ->map(function ($items) {
-                    $first = $items->first();
-                    return [
-                        'park' => [
-                            'id' => $first->park_id,
-                            'name' => $first->park->name,
-                        ],
-                        'priority_score' => $first->priorityScore->priority_score,
-                        'recommendations' => $items->map(fn ($item) => [
-                            'id' => $item->id,
-                            'scenario' => $item->scenario,
-                            'name' => $item->intervention_name,
-                            'category' => $item->category,
-                            'quantity' => $item->quantity,
-                            'unit' => $item->unit,
-                            'upfront_cost' => $item->upfront_cost,
-                            'annual_maintenance_cost' => $item->annual_maintenance_cost,
-                            'annual_water_cost' => $item->annual_water_cost,
-                            'cost_basis' => $item->cost_basis,
-                            'source' => $item->source,
-                            'source_url' => $item->source_url,
-                            'rule' => $item->rule_matched,
-                            'justification' => $item->justification,
-                        ])->values(),
-                    ];
-                })
-                ->values();
-        }
-
-        // Get latest investment plan for the latest heatmap
-        $investmentPlan = null;
-        if ($latestHeatmap) {
-            $plan = \App\Models\InvestmentPlan::where('heatmap_analysis_id', $latestHeatmap->id)
-                ->with(['items.park'])
-                ->latest()
-                ->first();
-            
-            if ($plan) {
-                $investmentPlan = [
-                    'id' => $plan->id,
-                    'budget' => $plan->budget,
-                    'allocated_cost' => $plan->allocated_cost,
-                    'remaining_budget' => $plan->remaining_budget,
-                    'total_modeled_benefit' => $plan->total_modeled_benefit,
-                    'modeled_priority_coverage' => $plan->modeled_priority_coverage,
-                    'items' => $plan->items->map(function ($item) {
-                        return [
-                            'park_id' => $item->park_id,
-                            'park_name' => $item->park->name,
-                            'intervention_type' => $item->intervention_type,
-                            'scenario' => $item->scenario,
-                            'quantity' => $item->quantity,
-                            'unit' => $item->unit,
-                            'total_cost' => $item->total_cost,
-                            'modeled_benefit' => $item->modeled_benefit,
-                        ];
-                    })->values(),
-                ];
-            }
-        }
+            });
 
         return Inertia::render('Dashboard', [
             'parks' => $parks,
-            'heatAnalysisResults' => $latestHeatAnalysis,
-            'heatmapResult' => $heatmapResult,
-            'environmentalResults' => $environmentalResults,
-            'satelliteResults' => $satelliteResults,
-            'priorityScores' => $priorityScores,
-            'interventionRecommendations' => $interventionRecommendations,
-            'investmentPlan' => $investmentPlan,
+            'heatAnalyses' => $heatAnalyses,
         ]);
     }
 
@@ -349,6 +225,12 @@ class ParkController extends Controller
             if ($response['data']['status'] === 'Completed') {
                 $manageHeatmap = new ManageHeatmapAnalysis();
                 $manageHeatmap->markAsCompleted($activityId, $response['data']);
+                
+                // Fetch the HeatmapAnalysis record to get its ID for navigation
+                $heatmapAnalysis = \App\Models\HeatmapAnalysis::where('activity_id', $activityId)->first();
+                if ($heatmapAnalysis) {
+                    $response['data']['heatmap_analysis_id'] = $heatmapAnalysis->id;
+                }
             }
             
             if ($response['data']['status'] === 'Completed' || $response['data']['status'] === 'Failed') {
@@ -368,33 +250,6 @@ class ParkController extends Controller
                 'message' => $e->getMessage(),
             ], 500);
         }
-    }
-
-    /**
-     * Get cached heatmap result without API call
-     */
-    public function getCachedHeatmapResult(string $activityId)
-    {
-        $cacheKey = 'heatmap_result_' . $activityId;
-        $cachedResult = cache()->get($cacheKey);
-        
-        if ($cachedResult) {
-            return Inertia::render('Dashboard', [
-                'parks' => Park::all(),
-                'cachedHeatmap' => [
-                    'cached' => true,
-                    'data' => $cachedResult,
-                ],
-            ]);
-        }
-        
-        return Inertia::render('Dashboard', [
-            'parks' => Park::all(),
-            'cachedHeatmap' => [
-                'cached' => false,
-                'message' => 'No cached result found',
-            ],
-        ]);
     }
 
     /**

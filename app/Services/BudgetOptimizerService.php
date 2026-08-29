@@ -174,6 +174,15 @@ class BudgetOptimizerService
      */
     public function createInvestmentPlan(int $heatmapAnalysisId, float $budget, array $optimizationResult): InvestmentPlan
     {
+        // Check if investment plan already exists for this heatmap
+        $existingPlan = InvestmentPlan::query()
+            ->where('heatmap_analysis_id', $heatmapAnalysisId)
+            ->first();
+
+        if ($existingPlan) {
+            throw new \Exception('Investment plan already exists for this heatmap. Data is available.');
+        }
+
         $plan = InvestmentPlan::create([
             'heatmap_analysis_id' => $heatmapAnalysisId,
             'budget' => $budget,

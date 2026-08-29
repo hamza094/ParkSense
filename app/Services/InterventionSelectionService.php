@@ -12,6 +12,15 @@ class InterventionSelectionService
         int $heatmapAnalysisId
     ): Collection {
 
+        // Check if intervention recommendations already exist for this heatmap
+        $existingRecommendations = InterventionRecommendation::query()
+            ->where('heatmap_analysis_id', $heatmapAnalysisId)
+            ->exists();
+
+        if ($existingRecommendations) {
+            throw new \Exception('Intervention recommendations already exist for this heatmap. Data is available.');
+        }
+
         /*
          * Only the Top 5 parks need intervention recommendations.
          */

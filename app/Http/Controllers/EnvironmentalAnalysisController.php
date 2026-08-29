@@ -12,12 +12,12 @@ class EnvironmentalAnalysisController extends Controller
     ) {}
 
     /**
-     * Run environmental analysis for top parks from latest heatmap
+     * Run environmental analysis for top parks from specific heatmap analysis
      */
-    public function runEnvironmentalAnalysis(Request $request)
+    public function runEnvironmentalAnalysis(Request $request, int $heatmapAnalysisId)
     {
         try {
-            $submissions = $this->service->analyzeTopParks(3);
+            $submissions = $this->service->analyzeTopParks($heatmapAnalysisId, 3);
 
             return response()->json([
                 'success' => true,

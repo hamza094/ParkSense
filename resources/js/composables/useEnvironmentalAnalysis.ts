@@ -2,19 +2,16 @@ import { ref } from 'vue';
 import { router, useHttp } from '@inertiajs/vue3';
 
 export function useEnvironmentalAnalysis() {
-    const isRunningEnvironmentalAnalysis = ref(false);
+    const loading = ref(false);
     const environmentalHttp = useHttp({});
 
-    const runEnvironmentalAnalysis = (
-        onSuccess: (submissions: any[]) => void,
-        heatAnalysisResults: any
-    ) => {
-        isRunningEnvironmentalAnalysis.value = true;
+    const runEnvironmentalAnalysis = (heatmapAnalysisId: number) => {
+        loading.value = true;
         
-        environmentalHttp.post('/environmental/run-analysis', {
+        environmentalHttp.post(`/environmental/run-analysis/${heatmapAnalysisId}`, {
             onSuccess: (data: any) => {
-                onSuccess(data.submissions);
                 router.flash('message', 'Environmental analysis submitted successfully. Processing...');
+                router.reload();
             },
             onHttpException: (response: any) => {
                 console.error('HTTP Error:', response.status);
@@ -25,13 +22,13 @@ export function useEnvironmentalAnalysis() {
                 router.flash('error', 'Network error while running environmental analysis');
             },
             onFinish: () => {
-                isRunningEnvironmentalAnalysis.value = false;
+                loading.value = false;
             }
         });
     };
 
     return {
-        isRunningEnvironmentalAnalysis,
+        loading,
         runEnvironmentalAnalysis,
     };
 }

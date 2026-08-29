@@ -1,24 +1,17 @@
 import { ref } from 'vue';
 import { router, useHttp } from '@inertiajs/vue3';
 
-export function useSatelliteAnalysis(initialResults: any = null) {
-    const satelliteAnalysisResults = ref<any>(initialResults);
-    const isRunningSatelliteAnalysis = ref(false);
+export function useSatelliteAnalysis() {
+    const loading = ref(false);
     const satelliteAnalysisHttp = useHttp({});
 
-    const runSatelliteAnalysis = (onSuccess: (submissions: any[]) => void, heatAnalysisResults: any) => {
-        if (!heatAnalysisResults || heatAnalysisResults.length === 0) {
-            router.flash('error', 'Please run heat analysis first.');
-            return;
-        }
-
-        isRunningSatelliteAnalysis.value = true;
+    const runSatelliteAnalysis = (heatmapAnalysisId: number) => {
+        loading.value = true;
         
-        satelliteAnalysisHttp.post('/satellite/run-analysis', {
+        satelliteAnalysisHttp.post(`/satellite/run-analysis/${heatmapAnalysisId}`, {
             onSuccess: (data: any) => {
-                satelliteAnalysisResults.value = data.submissions;
-                onSuccess(data.submissions);
-                router.flash('message', 'Satellite analysis submitted successfully!');
+                router.flash('message', 'Satellite analysis submitted successfully. Processing...');
+                router.reload();
             },
             onHttpException: (response: any) => {
                 console.error('HTTP Error:', response.status);
@@ -29,14 +22,13 @@ export function useSatelliteAnalysis(initialResults: any = null) {
                 router.flash('error', 'Network error while running satellite analysis');
             },
             onFinish: () => {
-                isRunningSatelliteAnalysis.value = false;
+                loading.value = false;
             }
         });
     };
 
     return {
-        satelliteAnalysisResults,
-        isRunningSatelliteAnalysis,
+        loading,
         runSatelliteAnalysis,
     };
 }

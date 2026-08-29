@@ -43,6 +43,7 @@ class EnvironmentalAnalysisService
             ],
             [
                 'data' => $result,
+                'status' => 'completed',
             ]
         );
     }
@@ -76,26 +77,27 @@ class EnvironmentalAnalysisService
         return $metric;
     }
 
-    public function analyzeTopParks(int $limit): array
+    public function analyzeTopParks(int $heatmapAnalysisId, int $limit): array
     {
-        // Get the latest completed heatmap analysis from database
-        $analysis = HeatmapAnalysis::query()
-            ->where('status', 'Completed')
-            ->orderByDesc('created_at')
-            ->first();
+        // Get the specific heatmap analysis from database
+        $analysis = HeatmapAnalysis::find($heatmapAnalysisId);
 
         if (!$analysis) {
-            throw new \Exception('No completed heatmap analysis found. Please run heat analysis first.');
+            throw new \Exception('Heatmap analysis not found. Please provide a valid analysis ID.');
         }
 
-        // Check if environmental analysis already exists for this heatmap
+        if ($analysis->status !== 'Completed') {
+            throw new \Exception('Heatmap analysis must be completed before running environmental analysis.');
+        }
+
+        // Check if environmental analysis already exists for this heatmap (pending or completed)
         $existingAnalysis = EnvironmentalMetric::query()
             ->where('heatmap_analysis_id', $analysis->id)
-            ->where('status', 'pending')
+            ->where('status', '!=', 'failed')
             ->exists();
 
         if ($existingAnalysis) {
-            throw new \Exception('Environmental analysis is already in progress for this heatmap. Please wait for completion or check the results.');
+            throw new \Exception('Environmental analysis already exists for this heatmap. Data is available.');
         }
 
         $topParks = ParkHeatAnalysis::query()

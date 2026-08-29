@@ -12,12 +12,12 @@ class SatelliteAnalysisController extends Controller
     ) {}
 
     /**
-     * Run satellite analysis for top parks from latest heatmap
+     * Run satellite analysis for top parks from specific heatmap analysis
      */
-    public function runSatelliteAnalysis(Request $request)
+    public function runSatelliteAnalysis(Request $request, int $heatmapAnalysisId)
     {
         try {
-            $submissions = $this->service->analyzeTopParks(3);
+            $submissions = $this->service->analyzeTopParks($heatmapAnalysisId, 3);
 
             return response()->json([
                 'success' => true,

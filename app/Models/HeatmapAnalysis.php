@@ -2,7 +2,9 @@
 
 namespace App\Models;
 
+use App\Models\ParkHeatAnalysis;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class HeatmapAnalysis extends Model
 {
@@ -28,4 +30,9 @@ class HeatmapAnalysis extends Model
         'stats_data' => 'array',
         'start_date' => 'date',
     ];
+
+    public function parkHeatAnalyses(): HasMany
+    {
+        return $this->hasMany(ParkHeatAnalysis::class, 'heatmap_analysis_id');
+    }
 }

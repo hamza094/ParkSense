@@ -31,6 +31,15 @@ class ParkPriorityScoreService
      */
     public function calculateForAnalysis(int $heatmapAnalysisId): Collection
     {
+        // Check if priority scores already exist for this heatmap
+        $existingScores = ParkPriorityScore::query()
+            ->where('heatmap_analysis_id', $heatmapAnalysisId)
+            ->exists();
+
+        if ($existingScores) {
+            throw new \Exception('Priority scores already exist for this heatmap. Data is available.');
+        }
+
         $heatAnalyses = ParkHeatAnalysis::query()
             ->with(['park'])
             ->where('heatmap_analysis_id', $heatmapAnalysisId)
