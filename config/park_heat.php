@@ -125,7 +125,6 @@ return [
         'recreation_community_center' => 5,
         'shade_structures' => 5,
     ],
-];
 
     /*
      * Model version for tracking algorithm changes.
