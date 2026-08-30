@@ -22,8 +22,10 @@ class DatabaseSeeder extends Seeder
             'email' => 'test@example.com',
         ]);*/
         
-        $this->call([
-            ParksSeeder::class,
-        ]);
+        // ParksSeeder is commented out to prevent automatic seeding during Laravel Cloud deployment
+        // Run manually after first deployment: php artisan db:seed --class=ParksSeeder
+        // $this->call([
+        //     ParksSeeder::class,
+        // ]);
     }
 }
