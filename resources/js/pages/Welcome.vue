@@ -47,10 +47,10 @@ router.on('finish', () => {
                 >
                     <h1 class="mb-1 text-2xl font-bold text-[#1b1b18] dark:text-[#EDEDEC]">ParkSense</h1>
                     <p class="mb-4 text-[#706f6c] dark:text-[#A1A09A]">
-                        Data-driven park management platform for urban heat analysis and intervention planning.
+                        Data-driven urban heat intelligence platform for Phoenix parks — from thermal mapping to budget-optimized cooling solutions.
                     </p>
                     <p class="mb-6 text-[#706f6c] dark:text-[#A1A09A]">
-                        ParkSense helps city planners and park managers analyze urban heat islands, prioritize interventions, and optimize budget allocation for park improvements.
+                        ParkSense helps city planners analyze urban heat islands, score park priority using 5 weighted factors, recommend cooling solutions (trees, shade structures, cool pavement), and optimize budget allocation using a knapsack algorithm.
                     </p>
                     <ul class="mb-6 flex flex-col lg:mb-8">
                         <li
@@ -104,7 +104,7 @@ router.on('finish', () => {
                                 </span>
                             </span>
                             <span>
-                                <span class="font-medium">Intervention Planning</span> - Generate data-driven recommendations for park improvements
+                                <span class="font-medium">Cooling Solutions</span> - Recommend trees, shade structures & cool pavement with Phoenix-verified costs
                             </span>
                         </li>
                         <li
@@ -170,7 +170,7 @@ router.on('finish', () => {
                                 </svg>
                             </div>
                             <h2 class="text-3xl font-bold text-white mb-2">ParkSense</h2>
-                            <p class="text-white/80 text-sm">Smart Park Management</p>
+                            <p class="text-white/80 text-sm">Urban Heat Intelligence for Phoenix Parks</p>
                         </div>
                     </div>
                 </div>

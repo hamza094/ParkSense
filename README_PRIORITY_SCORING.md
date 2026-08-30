@@ -195,54 +195,11 @@ The potential for improvement through cooling solutions based on current satelli
 
 ---
 
-## ⚖️ **Physical Condition vs. Cooling Solution Opportunity: The Key Difference**
+## ⚖️ Physical Condition vs. Cooling Opportunity
 
-These two factors may seem similar, but they measure very different things:
-
-### **Physical Condition (15% weight)**
-**"How bad is the current situation?"**
-- **Focus**: Current state of the park - existing vegetation deficit + existing hard surfaces
-- **Question**: "How much is this park already suffering from heat?"
-- **Higher Score** = Worse current condition (more urgent need)
-- **Primary Data**: Current vegetation percentage, current hard surface percentage
-- **Use Case**: Parks that are already in poor condition need immediate attention
-
-**Example**: Small pocket park with 10% vegetation, 80% hard surface
-- Physical Condition Score: 85 (very poor - high urgency)
-- But limited space for improvements (only 2 acres)
-
-### **Cooling Solution Opportunity (10% weight)**
-**"How much can we improve the situation?"**
-- **Focus**: Future improvement potential - space for new trees, cool pavement, shade structures
-- **Question**: "How much impact will cooling investments have here?"
-- **Higher Score** = More room for improvement (higher investment return)
-- **Primary Data**: Vegetation opportunity (100 - current), hard surface opportunity, park size (acreage)
-- **Use Case**: Parks where investments will have maximum impact and benefit most people
-
-**Example**: Large community park with 30% vegetation, 40% hard surface
-- Physical Condition Score: 55 (moderate condition)
-- Cooling Opportunity Score: 85 (massive space for improvements, 20 acres)
-
-### **Why Both Factors Are Needed**
-
-**Physical Condition alone** would prioritize small parks that are already suffering, even if they can't accommodate major improvements.
-
-**Cooling Opportunity alone** would prioritize large parks regardless of whether they actually need cooling.
-
-**Together**, they ensure smart investment decisions:
-
-| Scenario | Physical Condition | Cooling Opportunity | Decision |
-|----------|-------------------|---------------------|----------|
-| **Scenario 1** | High need (85) | Low opportunity (25) | Priority, but limited impact (small park) |
-| **Scenario 2** | Moderate need (55) | High opportunity (85) | High priority (large park, high impact) |
-| **Scenario 3** | High need (80) | High opportunity (70) | **Highest priority** (urgent + high impact) |
-
-### **Simple Analogy**
-
-**Physical Condition**: "This house is in bad shape" → Need to fix it now
-**Cooling Opportunity**: "This house has lots of room for renovation" → Will get maximum value from investment
-
-**Best Investment**: A house that's in bad shape AND has lots of room for renovation.
+- **Physical Condition (15%)** = "How bad is this park now?" — Low vegetation + high hard surfaces = higher score
+- **Cooling Opportunity (10%)** = "How much can we improve it?" — Room for new trees + space for cool pavement + park size = higher score
+- **Together**: They ensure we invest in parks that both *need* help and *can benefit* from it
 
 ---
 
@@ -299,7 +256,7 @@ Final Priority Score =
 All thresholds and weights are configured in `config/park_heat.php`:
 - Temperature thresholds: 30-45°C (Phoenix summer range)
 - Environmental thresholds: Calibrated for Phoenix desert climate
-- Priority weights: ParkHeat planning model (40% heat dominant)
+- Priority weights: ParkSense planning model (40% heat dominant)
 - Satellite classifications: Based on FortyGuard API categories
 
 ## 💡 Business Value
@@ -330,23 +287,12 @@ All thresholds and weights are configured in `config/park_heat.php`:
 - [ASHRAE Standard 55 - Thermal Environmental Conditions](https://www.ashrae.org/technical-resources/bookstore/standard-55-thermal-environmental-conditions-for-human-occupancy)
 - [CDC/NIOSH Heat Index Guidance](https://www.cdc.gov/niosh/bulletin/2017/heat-index.html)
 
-## 🎯 Important Notes
-
-**Model Clarification:**
-This is the **ParkHeat Priority Model v2** - a configurable planning model calibrated for Phoenix summer conditions. Thresholds and weights are modeling parameters, not official City of Phoenix scoring standards. The model represents ParkHeat's evidence-informed approach to park heat mitigation prioritization.
-
-**Environmental Factor Relationships:**
-The environmental components (temperature, heat index, humidity, solar) are not completely independent. For example, temperature + humidity = heat index. Our model accounts for these relationships in the weighting structure to avoid double-counting.
-
-**Phoenix-Specific Calibration:**
-All thresholds and parameters are specifically calibrated for Phoenix's desert climate, urban heat island effects, and park system characteristics. Different cities would require different calibration values.
-
 ## 🎯 Bottom Line
 
-**Simple Version**: We combine heat data, environmental conditions, satellite imagery, and park characteristics to rank parks by their overall need for cooling solutions. Parks with higher priority scores get more attention and investment because they need it most and will benefit most from cooling improvements.
+We combine heat data, environmental conditions, satellite imagery, and park characteristics to rank parks by their overall need for cooling solutions. Parks with higher priority scores get more attention and investment because they need it most and will benefit most from cooling improvements.
 
-**Technical Version**: Our ParkHeat Priority Model v2 uses a weighted 5-factor scoring system (40% heat severity, 20% environmental stress, 15% physical condition, 15% park importance, 10% cooling solution opportunity) with Phoenix-calibrated thresholds. Each factor is normalized to a 0-100 scale using evidence-based parameters derived from Phoenix climate data, heat response planning, and thermal comfort standards. The configurable model allows for continuous refinement while maintaining transparent, data-driven park prioritization.
+All thresholds are calibrated for Phoenix's desert climate. Different cities would require different calibration values — the model is fully configurable via `config/park_heat.php`.
 
 ---
 
-*Powered by ParkHeat Priority Model v2 - Phoenix-calibrated planning model for urban heat mitigation. References include City of Phoenix heat response framework, NWS Phoenix climate data, ASHRAE thermal standards, and CDC heat stress guidance.*
+*Powered by ParkSense Priority Model — Phoenix-calibrated planning model for urban heat mitigation.*

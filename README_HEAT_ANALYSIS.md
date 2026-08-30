@@ -111,7 +111,7 @@ Our heat analysis system identifies hot spots in Phoenix parks by analyzing temp
 ✅ **Accurate Heat Mapping**: Precise temperature data across Phoenix parks
 ✅ **Data-Driven Prioritization**: Rank parks by actual heat severity
 ✅ **Focused Analysis**: Concentrate resources on hottest areas
-✅ **Intervention Targeting**: Match solutions to specific heat profiles
+✅ **Targeted Cooling Solutions**: Match solutions to specific heat profiles
 ✅ **Scalable System**: Analyze any geographic area in Phoenix
 
 ## 🎯 Integration with Analysis System
@@ -120,7 +120,7 @@ Our heat analysis system identifies hot spots in Phoenix parks by analyzing temp
 - **Environmental Analysis**: Critical parks get detailed environmental assessment
 - **Satellite Analysis**: Satellite imagery for hottest parks
 - **Priority Scoring**: Heat data feeds into overall park priority scores
-- **Intervention Recommendations**: Heat-specific cooling strategies
+- **Cooling Recommendations**: Heat-specific cooling strategies
 - **Budget Optimization**: Focus investments on highest-heat areas
 
 ## 📋 Key Parameters
@@ -144,10 +144,8 @@ Our heat analysis system identifies hot spots in Phoenix parks by analyzing temp
 
 ## 🎯 Bottom Line
 
-**Simple Version**: We draw areas on the map, get detailed temperature data from the FortyGuard API, match it to our park boundaries, and identify the hottest parks that need immediate cooling solutions.
-
-**Technical Version**: Our system uses 60-meter resolution temperature snapshots from the FortyGuard API, matches heat tiles to park boundaries using efficient spatial intersection, calculates comprehensive temperature metrics for each park, and ranks them by heat severity to identify the critical parks requiring focused environmental and satellite analysis.
+We draw areas on the map, get detailed temperature data from the FortyGuard API, match it to our park boundaries, and identify the hottest parks that need immediate cooling solutions.
 
 ---
 
-*Powered by FortyGuard Heatmap API with optimized parameters for urban heat analysis. Uses bounding box intersection for efficient tile-park matching with future upgrade path to exact polygon intersection.*
+*Powered by FortyGuard Heatmap API with optimized parameters for urban heat analysis.*

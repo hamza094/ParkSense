@@ -80,10 +80,8 @@ Our heat analysis system uses official Phoenix parks data as its foundation. Thi
 
 ## 🎯 Bottom Line
 
-**Simple Version**: We use official Phoenix park data to build a foundation for accurate heat analysis. This data helps us understand each park's characteristics, suggest the right cooling solutions, and make smart investment decisions.
-
-**Technical Version**: Our system stores 189 Phoenix flatland parks with precise boundaries and complete attributes using official government GIS data. This spatial foundation enables accurate heat mapping, intelligent prioritization, and targeted cooling solution recommendations.
+We use official Phoenix park data to build a foundation for accurate heat analysis. This data helps us understand each park's characteristics, suggest the right cooling solutions, and make smart investment decisions.
 
 ---
 
-*Data Source: City of Phoenix Official GIS Systems. All park boundaries and attributes come from the most current government database.*
+*Data Source: City of Phoenix Official GIS Systems.*

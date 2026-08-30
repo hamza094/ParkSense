@@ -15,7 +15,7 @@ Our cooling solution recommendation system uses three levels of evidence:
 - Phoenix landscape standards (600 sq ft/tree)
 - Phoenix canopy goals (25% by 2030)
 
-**🟡 ParkHeat Planning Assumptions**: Model parameters for optimization and planning
+**🟡 ParkSense Planning Assumptions**: Model parameters for optimization and planning
 - Tree package sizes (25/50/100 trees)
 - Ramada midpoint planning value ($60K)
 - Cool pavement cost ($3/sq ft)
@@ -68,7 +68,7 @@ Our system recommends 3 types of cooling solutions based on Phoenix-specific cos
 - **Medium Package**: 50 trees ($52,500 upfront)
 - **Large Package**: 100 trees ($105,000 upfront)
 
-**Evidence Level**: 🟡 ParkHeat planning assumption - package sizes for optimization scenarios (costs per tree are Phoenix-verified)
+**Evidence Level**: 🟡 ParkSense planning assumption - package sizes for optimization scenarios (costs per tree are Phoenix-verified)
 
 **Package Selection Rules**:
 - **Small**: When intervention opportunity score ≤ 50 (limited space)
@@ -86,11 +86,11 @@ Our system recommends 3 types of cooling solutions based on Phoenix-specific cos
 Parks that scored high on "intervention opportunity" in priority scoring get larger tree packages because they have more space and potential for improvement.
 
 **When Recommended**:
-- Heat severity ≥ 50 (ParkHeat planning threshold)
-- Vegetation ≤ 45% (ParkHeat planning threshold — relaxed to include parks with partial grass coverage)
+- Heat severity ≥ 50 (ParkSense planning threshold)
+- Vegetation ≤ 45% (ParkSense planning threshold — relaxed to include parks with partial grass coverage)
 - Priority: 10 (highest priority cooling solution)
 
-**Evidence Level**: 🟡 ParkHeat planning threshold for rule matching
+**Evidence Level**: 🟡 ParkSense planning threshold for rule matching
 
 **Source**: City of Phoenix Shade Phoenix Plan - official Phoenix tree planting program data
 
@@ -106,18 +106,18 @@ Parks that scored high on "intervention opportunity" in priority scoring get lar
 
 **Cost Breakdown**:
 - **Phoenix Range**: $40,000 - $80,000 per ramada (Neighborhood Parks Enhancement Program)
-- **Planning Value**: $60,000 per ramada (ParkHeat midpoint for budget calculations)
+- **Planning Value**: $60,000 per ramada (ParkSense midpoint for budget calculations)
 - **Includes**: Design, construction, installation
 
-**Evidence Level**: 🟢 Phoenix verified for cost range, 🟡 ParkHeat planning assumption for midpoint value
+**Evidence Level**: 🟢 Phoenix verified for cost range, 🟡 ParkSense planning assumption for midpoint value
 
 **When Recommended**:
-- Heat severity ≥ 50 (ParkHeat planning threshold)
+- Heat severity ≥ 50 (ParkSense planning threshold)
 - Playground present (bool = true)
 - No existing shade structures (bool = false)
 - Priority: 8 (high priority for visitor comfort)
 
-**Evidence Level**: 🟡 ParkHeat planning threshold for rule matching
+**Evidence Level**: 🟡 ParkSense planning threshold for rule matching
 
 **Source**: City of Phoenix Parks - Neighborhood Parks Enhancement Program data
 
@@ -133,17 +133,17 @@ Parks that scored high on "intervention opportunity" in priority scoring get lar
 
 **Cost Breakdown**:
 - **Planning Cost**: $3.00 per square foot
-- **Coverage Assumption**: 10% of hard surface area (ParkHeat planning scenario)
+- **Coverage Assumption**: 10% of hard surface area (ParkSense planning scenario)
 - **Rationale**: Treating all hard surfaces may not be cost-effective; strategic treatment targets high-impact areas
 
-**Evidence Level**: 🟡 ParkHeat planning estimate - informed by Phoenix roadway context, not a Phoenix park-specific construction cost
+**Evidence Level**: 🟡 ParkSense planning estimate - informed by Phoenix roadway context, not a Phoenix park-specific construction cost
 
 **When Recommended**:
-- Heat severity ≥ 50 (ParkHeat planning threshold)
-- Hard surface ≥ 25% (ParkHeat planning threshold — relaxed to include parks with significant parking or pathways)
+- Heat severity ≥ 50 (ParkSense planning threshold)
+- Hard surface ≥ 25% (ParkSense planning threshold — relaxed to include parks with significant parking or pathways)
 - Priority: 9 (high priority for heat reduction)
 
-**Evidence Level**: 🟡 ParkHeat planning threshold for rule matching
+**Evidence Level**: 🟡 ParkSense planning threshold for rule matching
 
 **Source**: City of Phoenix cool-pavement feasibility study (roadway reference, adapted for parks)
 
@@ -163,10 +163,10 @@ Each cooling solution has specific "trigger conditions" based on park data:
 ### **Where Rule Values Come From**
 
 **Threshold Values (The "When" Conditions):**
-- **Source**: `config/park_heat.php` - ParkHeat planning assumptions
-- **Heat severity ≥ 50**: ParkHeat planning threshold (not Phoenix-verified)
-- **Vegetation ≤ 45%**: ParkHeat planning threshold (not Phoenix-verified, relaxed from 20%)
-- **Hard surface ≥ 25%**: ParkHeat planning threshold (not Phoenix-verified, relaxed from 50%)
+- **Source**: `config/park_heat.php` - ParkSense planning assumptions
+- **Heat severity ≥ 50**: ParkSense planning threshold (not Phoenix-verified)
+- **Vegetation ≤ 45%**: ParkSense planning threshold (not Phoenix-verified, relaxed from 20%)
+- **Hard surface ≥ 25%**: ParkSense planning threshold (not Phoenix-verified, relaxed from 50%)
 - **Purpose**: Define when each cooling solution should be recommended
 
 **Actual Values Being Compared:**
@@ -175,7 +175,7 @@ Each cooling solution has specific "trigger conditions" based on park data:
 - **Hard surface %**: From satellite analysis (calculated from satellite imagery)
 - **Playground/Shade**: From park database (Phoenix GIS data)
 
-**Evidence Level**: 🟡 ParkHeat planning threshold for rule matching
+**Evidence Level**: 🟡 ParkSense planning threshold for rule matching
 
 ### **Complete Data Flow**
 
@@ -322,12 +322,12 @@ Some values are planning assumptions clearly labeled as such:
 ### **Cooling Benefit Evidence System**
 
 **What It Is:**
-Each intervention recommendation includes Phoenix-specific cooling benefit evidence from research studies and field measurements, with clear separation between what ParkHeat calculates (intervention scale) and what Phoenix research provides (cooling evidence).
+Each intervention recommendation includes Phoenix-specific cooling benefit evidence from research studies and field measurements, with clear separation between what ParkSense calculates (intervention scale) and what Phoenix research provides (cooling evidence).
 
 **Evidence Types:**
 - 🟢 **Measured Reference**: Actual Phoenix field measurements (cool pavement)
 - 🟡 **Research Reference**: Phoenix research studies (trees, ramada)
-- 🔵 **Planning Assumption**: ParkHeat planning estimates
+- 🔵 **Planning Assumption**: ParkSense planning estimates
 
 **Configuration:**
 Stored in `config/cooling_benefits.php` with enhanced data structure:
@@ -366,8 +366,8 @@ Stored in `config/cooling_benefits.php` with enhanced data structure:
 ### **Configuration**
 All cooling solution data is configured in `config/park_heat.php`:
 - **Catalog**: Cooling solution types, costs, sources
-- **Rules**: Trigger conditions for each solution (ParkHeat planning thresholds)
-- **Planning Packages**: Tree planting package sizes (ParkHeat planning scenarios)
+- **Rules**: Trigger conditions for each solution (ParkSense planning thresholds)
+- **Planning Packages**: Tree planting package sizes (ParkSense planning scenarios)
 - **Model Version**: v3 (Phoenix-referenced intervention planning model)
 
 ## 🎯 **Important Notes**
@@ -383,13 +383,13 @@ This is a planning model for budgeting and prioritization. Actual project costs 
 **Evidence Level Distinction**:
 Our model clearly distinguishes between:
 - **Phoenix-verified data**: Costs and standards from official Phoenix documents
-- **ParkHeat planning assumptions**: Model parameters for optimization scenarios
+- **ParkSense planning assumptions**: Model parameters for optimization scenarios
 - **FortyGuard measurements**: Actual park condition data
 
 This distinction makes our architecture scientifically honest and defensible when questioned about data sources.
 
 **Recommendation Limit**:
-- Maximum 2 cooling solutions per park (ParkHeat planning assumption)
+- Maximum 2 cooling solutions per park (ParkSense planning assumption)
 - Prevents overwhelming park managers
 - Focuses on highest-impact solutions
 
@@ -400,8 +400,8 @@ All costs and rules are specifically calibrated for Phoenix municipal standards 
 
 **Simple Version**: After we identify the top 5 parks that need help most, we recommend specific cooling solutions (trees, shade structures, cool pavement) based on each park's conditions. We use Phoenix's actual cost data for trees and ramadas, with planning estimates for other solutions, to make credible budget recommendations that help decision-makers understand investment requirements.
 
-**Technical Version**: Our cooling solution recommendation system uses a rule-based approach to match park conditions to appropriate cooling investments. The system evaluates the top 5 priority parks against ParkHeat planning thresholds for tree planting, ramada construction, and cool pavement treatment. Cost calculations use Phoenix-verified data for trees and ramadas, with planning estimates for cool pavement and other parameters. The model generates specific, actionable recommendations with upfront costs, annual maintenance, and water requirements to support budget optimization and investment decision-making.
+**Technical Version**: Our cooling solution recommendation system uses a rule-based approach to match park conditions to appropriate cooling investments. The system evaluates the top 5 priority parks against ParkSense planning thresholds for tree planting, ramada construction, and cool pavement treatment. Cost calculations use Phoenix-verified data for trees and ramadas, with planning estimates for cool pavement and other parameters. The model generates specific, actionable recommendations with upfront costs, annual maintenance, and water requirements to support budget optimization and investment decision-making.
 
 ---
 
-*Powered by ParkHeat Cooling Solution Recommendation Model v3 - Phoenix-referenced intervention planning model with verified costs for trees and ramadas, planning estimates for cool pavement and rule thresholds. Evidence levels: Phoenix-verified costs (🟢), ParkHeat planning assumptions (🟡), FortyGuard measurements (🔵).*
+*Powered by ParkSense Cooling Solution Recommendation Model v3 - Phoenix-referenced intervention planning model with verified costs for trees and ramadas, planning estimates for cool pavement and rule thresholds. Evidence levels: Phoenix-verified costs (🟢), ParkSense planning assumptions (🟡), FortyGuard measurements (🔵).*

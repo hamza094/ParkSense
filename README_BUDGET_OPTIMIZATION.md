@@ -22,7 +22,7 @@ After we recommend cooling solutions for the top priority parks, our budget opti
 ## 💰 **Budget Scenarios and Phoenix References**
 
 ### **Why We Use Phoenix Budget References**
-ParkHeat uses real Phoenix budget numbers to make the demo more realistic. These aren't budgets that Phoenix gives to ParkHeat - they're just official Phoenix amounts that help show how the system would work with real municipal funding.
+ParkSense uses real Phoenix budget numbers to make the demo more realistic. These aren't budgets that Phoenix gives to ParkSense - they're just official Phoenix amounts that help show how the system would work with real municipal funding.
 
 ### **Phoenix Budget Reference We Use**
 
@@ -57,7 +57,7 @@ ParkHeat uses real Phoenix budget numbers to make the demo more realistic. These
 We use **$1.5 million** as the default because it matches Phoenix's actual neighborhood park improvement program. This makes the demo more realistic while still letting you test with different amounts.
 
 ### **Important Note**
-**The $1.5M budget is based on Phoenix's real program, but Phoenix doesn't give this money to ParkHeat. We use it as a realistic example to show how the system works.**
+**The $1.5M budget is based on Phoenix's real program, but Phoenix doesn't give this money to ParkSense. We use it as a realistic example to show how the system works.**
 
 ### **Budget Flexibility**
 You can:
@@ -117,7 +117,7 @@ Modeled Benefit = 40 × 0.25 = 10.0
 2. **Budget Stage**: System reads scenario field and applies corresponding scale factor
 3. **Result**: Same benefit calculation approach for all intervention types
 
-**Evidence Level**: 🟡 ParkHeat planning assumption - scale factors for benefit modeling
+**Evidence Level**: 🟡 ParkSense planning assumption - scale factors for benefit modeling
 
 ### **Why These Scale Factors**
 
@@ -132,7 +132,7 @@ Modeled Benefit = 40 × 0.25 = 10.0
 - **Rationale**: These interventions have moderate impact but no package size variants
 - **Consistency**: Provides baseline benefit calculation for non-tree interventions
 
-**Evidence Level**: 🟡 ParkHeat planning assumption - scale factors for benefit modeling
+**Evidence Level**: 🟡 ParkSense planning assumption - scale factors for benefit modeling
 
 ## 🧮 **How the Algorithm Works**
 
@@ -312,4 +312,4 @@ Real-world results will vary based on:
 
 ---
 
-*Powered by ParkHeat Budget Optimization Model v1 - Smart budget allocation for maximum cooling impact. Uses knapsack optimization with priority-based benefit modeling, Phoenix-referenced costs, and Phoenix budget scenarios ($1.5M NPEP reference for realistic demo).*
+*Powered by ParkSense Budget Optimization Model v1 - Smart budget allocation for maximum cooling impact. Uses knapsack optimization with priority-based benefit modeling, Phoenix-referenced costs, and Phoenix budget scenarios ($1.5M NPEP reference for realistic demo).*

@@ -158,7 +158,7 @@ After identifying the hottest parks through heat analysis, we perform detailed e
 
 **Enables:**
 ✅ **Intelligent Prioritization**: Multi-factor analysis for accurate park ranking
-✅ **Targeted Interventions**: Match solutions to specific environmental conditions
+✅ **Targeted Cooling Solutions**: Match solutions to specific environmental conditions
 ✅ **Resource Optimization**: Focus analysis on parks that need it most
 ✅ **Comprehensive Understanding**: Complete picture of each park's heat situation
 ✅ **Data-Driven Decisions**: Priorities based on multiple data sources, not just temperature
@@ -194,10 +194,8 @@ After identifying the hottest parks through heat analysis, we perform detailed e
 
 ## 🎯 Bottom Line
 
-**Simple Version**: After finding the hottest parks, we analyze their environmental conditions and satellite imagery to understand why they're hot and what can be done about it. This detailed data helps us rank parks by their overall need for cooling solutions and recommend the most effective cooling strategies.
-
-**Technical Version**: Our system selects the top parks from heat analysis and performs comprehensive environmental and satellite analysis using the same time parameters for data consistency. Environmental analysis provides heat index, humidity, air quality, and solar data for environmental stress assessment. Satellite analysis delivers AI-powered land cover segmentation for physical condition and cooling solution opportunity evaluation. Together with heat data and park characteristics, this multi-factor analysis drives our intelligent priority scoring system.
+After finding the hottest parks, we analyze their environmental conditions and satellite imagery to understand why they're hot and what can be done about it. This detailed data helps us rank parks by their overall need for cooling solutions and recommend the most effective strategies.
 
 ---
 
-*Powered by FortyGuard Environmental Parameters API and Satellite Segmentation API. Uses consistent time parameters across all analysis types for accurate, comparable data. Focuses resources on critical parks identified through heat analysis for maximum impact.*
+*Powered by FortyGuard Environmental Parameters API and Satellite Segmentation API.*

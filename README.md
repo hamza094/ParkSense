@@ -1,13 +1,29 @@
 # ParkSense 🌳☀️
 
-> **Intelligent Urban Heat Mitigation Planning System for Phoenix Parks**
+> **Urban Heat Intelligence Platform for Phoenix Parks**
 > 
-> *A data-driven decision-support platform combining satellite thermal analysis, AI land-cover segmentation, multi-criteria priority scoring, and budget-constrained knapsack optimization to protect urban communities from extreme heat.*
+> ParkSense analyzes urban heat in Phoenix parks using satellite thermal data, AI land-cover segmentation, and environmental metrics — then recommends budget-optimized cooling solutions (trees, shade structures, cool pavement) backed by real Phoenix municipal costs.
+
+> [!NOTE]
+> Throughout this project, **"intervention"** in the codebase and database refers to **cooling solutions** — practical strategies like tree planting, shade structures (ramadas), and cool pavement to reduce park temperatures.
 
 ## 🎬 Demo
 
 [![Watch Demo](https://img.shields.io/badge/Watch-3min%20Demo-red?logo=loom)](https://www.loom.com/share/0175db19449b4d37a1ccee5d8501cd9a)
 [![Live Demo](https://img.shields.io/badge/Live-Demo-brightgreen)](https://parksense-production-n7ta4y.laravel.cloud/)
+
+---
+
+## ⚠️ Important Notes for Evaluators & Local Development
+
+1. **Google Maps API Key**: A valid Google Maps API Key is **required** for map and polygon-drawing functionality.
+2. **Live FortyGuard API**: This app queries live FortyGuard APIs. Occasionally, requests may need a retry if the server is slow.
+3. **Environmental API**: The Environmental Parameters API polling may sometimes return incomplete results (e.g., data for 2 out of 3 parks). This is a limitation of the external FortyGuard API, not our application. **If this happens, refresh the page and re-select the polygon.**
+4. **Satellite Processing**: The Satellite AI Segmentation API works correctly but takes longer to process. **Please be patient** — the latency is from FortyGuard's processing, not our end.
+5. **Top 3 Parks Limit**: By default, ParkSense analyzes the **top 3 hottest parks** for environmental and satellite analysis. To change this, edit the limit in:
+   - `app/Http/Controllers/EnvironmentalAnalysisController.php`
+   - `app/Http/Controllers/SatelliteAnalysisController.php`
+6. **Flatland Parks Only**: The dataset covers **189 flatland municipal parks** in Phoenix. Mountain preserves and desert parks are excluded — cooling solutions like ramadas and cool pavement are only feasible on flat terrain.
 
 ---
 
@@ -18,7 +34,7 @@
 | **Impact** | 40% | Solves real Phoenix heat mortality risk for 189 parks. Output is a ready-to-use investment plan referencing Phoenix's $1.5M Neighborhood Parks Enhancement Program budget |
 | **Technical Execution** | 35% | Laravel 11 service architecture, MySQL spatial ST_Intersects queries, async multi-park FortyGuard polling, 5-factor weighted scorer, Knapsack DP budget optimizer |
 | **Innovation** | 15% | End-to-end pipeline from thermal map → satellite segmentation → priority score → budget plan. Multi-choice Knapsack optimization for municipal investment allocation |
-| **Communication** | 10% | 3-tier evidence framework (🟢🟡🔵), transparent config in `park_heat.php`, 6 specialized READMEs, every number linked to source |
+| **Communication** | 10% | 3-tier evidence framework (🟢🟡🔵), transparent config, 6 specialized READMEs, every number linked to source |
 
 ---
 
@@ -33,99 +49,67 @@
 
 ---
 
-## ⚠️ Important Notes for Evaluators & Local Development
+## 💡 How ParkSense Works (6-Step Pipeline)
 
-Please be aware of the following when testing or running this application locally:
+ParkSense runs a 6-step analysis pipeline, each step building on the previous:
 
-1. **Google Maps API Key**: For local development, a valid Google Maps API Key is **required** for map and polygon-drawing functionality.
-2. **Live FortyGuard API Usage & Retries**: This application queries live FortyGuard APIs. Occasionally, API requests may require a manual retry if the external server takes too long to respond.
-3. **Incomplete Environmental Results**: The Environmental Parameters API polling can take a while to return a completed status. Sometimes it may return incomplete results (e.g., retrieving data for only 2 out of 3 parks) because the external API might drop or fail to process small or complex park geometries. **If this happens, refresh the page and select the park polygon again.**
-4. **Satellite Processing Time**: The Satellite AI Segmentation API works correctly but takes a little longer to process images. **Please be patient**—this latency is from the external FortyGuard API's processing side, not our application's end.
-5. **Top N Parks Analysis Limit**: By default, the application is configured to select the **top 3 hottest parks** (based on the heatmap record) for environmental and satellite analysis to avoid hitting API rate limits. If you need to analyze more parks at once, you can edit the `3` limit in these two controller files:
-   - `app/Http/Controllers/EnvironmentalAnalysisController.php`
-   - `app/Http/Controllers/SatelliteAnalysisController.php`
-6. **Flatland Parks Scope**: The dataset is strictly scoped to the **flatland municipal parks of the City of Phoenix** (189 parks in total). Mountain preserves, desert parks, and open space parks (e.g., Camelback Mountain, South Mountain Park) are intentionally excluded from the data model, aligning with standard municipal shade/cooling intervention programs where structural interventions (e.g., Ramadas, cool pavements) are feasible.
+### Step 1: Heat Analysis
+Draw a polygon on the map → ParkSense finds which parks fall inside it → FortyGuard returns 60m thermal tiles → we calculate average temperature per park.
 
----
+### Step 2: Environmental Analysis
+For the top 3 hottest parks → FortyGuard returns heat index, humidity, wet bulb temperature, and solar irradiance data → used for Environmental Stress scoring.
 
-## 📋 Table of Contents
+### Step 3: Satellite Analysis
+For the same top 3 parks → FortyGuard AI segments satellite imagery into land-cover classes (tree, grass, road, building, bare ground) → used for Physical Condition and Cooling Opportunity scoring.
 
-1. [Project Overview](#-project-overview)
-2. [The Problem](#-the-problem)
-3. [The Solution](#-the-solution)
-4. [Architecture & Technology Stack](#-architecture--technology-stack)
-5. [Key Features & Analysis Pipeline](#-key-features--analysis-pipeline)
-6. [Data Sources & Evidence Framework](#-data-sources--evidence-framework)
-7. [System Workflow](#-system-workflow)
-8. [Project Structure](#-project-structure)
-9. [Configuration Reference](#-configuration-reference)
-10. [Local Development Setup](#-local-development-setup)
-11. [Testing & Verification](#-testing--validation)
-12. [Specialized Documentation Links](#-specialized-documentation-links)
-13. [License & Attributions](#-license--attributions)
+### Step 4: Priority Scoring (5-Factor Weighted Model)
+Each park gets a score from 0–100 combining:
 
----
+| Factor | Weight | Data Source |
+|--------|--------|-------------|
+| Heat Severity | 40% | Heat analysis temperature |
+| Environmental Stress | 20% | Environmental analysis metrics |
+| Physical Condition | 15% | Satellite land-cover analysis |
+| Park Importance | 15% | Park type, size, amenities |
+| Cooling Opportunity | 10% | Satellite + park size data |
 
-## 📍 Project Overview
+### Step 5: Cooling Solution Recommendations
+For the top 5 priority parks, ParkSense recommends specific cooling solutions based on rule matching:
 
-**ParkSense** is a full-stack urban heat intelligence application designed for city planners, municipal sustainability officers, and park managers in the City of Phoenix. By integrating high-resolution thermal data, satellite land-cover segmentation, and Phoenix municipal standards, ParkSense translates raw geospatial metrics into actionable, cost-modeled cooling interventions.
+| Cooling Solution | When Recommended | Cost Source |
+|-----------------|-----------------|-------------|
+| 🌳 **Tree Planting** (25/50/100 trees) | Heat severity ≥ 50, vegetation ≤ 45% | $1,050/tree — Phoenix Shade Plan 🟢 |
+| 🏗️ **Shade Ramada** | Heat ≥ 50, has playground, no existing shade | $60K — Phoenix NPEP 🟢 |
+| 🛣️ **Cool Pavement** | Heat ≥ 50, hard surface ≥ 25% | $3/sqft on 10% of hard surface 🟡 |
 
-### Target Users
-- **Urban Planners & Municipal Officials**: Design data-backed shade and cooling master plans.
-- **Parks & Recreation Managers**: Identify vulnerable parks and prioritize capital improvement projects.
-- **Heat Mitigation Specialists & Researchers**: Model thermal stress patterns and assess return on investment for cooling strategies.
-
----
-
-## 🌵 The Problem
-
-Phoenix, Arizona experiences some of the most extreme summer temperatures in North America, with summer highs consistently exceeding 110°F (43.3°C). Dense impervious surfaces exacerbate the Urban Heat Island (UHI) effect, retaining ambient heat overnight and creating severe public health hazards.
-
-### Planning Challenges
-1. **Disparate Data Silos**: Temperature data, satellite land-cover imagery, and park amenity inventories are rarely integrated into a single actionable interface.
-2. **Subjective Prioritization**: Without objective multi-criteria scoring, resource allocation can be arbitrary rather than heat-risk-driven.
-3. **Uncertain Cost-Benefit Ratios**: Municipal decision-makers lack transparent, evidence-based cost models to justify funding for trees, shade structures, or reflective coatings within strict budgetary constraints.
-
----
-
-## 💡 The Solution
-
-ParkSense solves these challenges through an end-to-end analytical pipeline:
-
-1. **Interactive Spatial Targeting**: Draw arbitrary Areas of Interest (AOI) across Phoenix to dynamically intersect flatland municipal parks.
-2. **Thermal Snapshot Ingestion**: Query FortyGuard's 60m-resolution thermal models to establish park-level temperature baselines.
-3. **AI-Driven Land Cover & Environmental Profiling**: Retrieve multi-spectral satellite segmentation and microclimate stress metrics (heat index, wet bulb, solar irradiance).
-4. **5-Factor Weighted Priority Scoring**: Calculate composite urgency scores (0–100) reflecting heat severity, environmental stress, physical deficits, civic importance, and intervention feasibility.
-5. **Rule-Based Cooling Recommendations**: Trigger Phoenix-verified intervention packages (Tree Planting, Ramadas, Cool Pavement) tailored to each park's physical footprint.
-6. **Budget Optimization Engine**: Execute a Multiple-Choice Knapsack Algorithm to maximize community cooling benefit while strictly adhering to municipal budget limits.
+### Step 6: Budget Optimization (Knapsack Algorithm)
+Given a budget (default: $1.5M from Phoenix's real NPEP program), ParkSense uses a **Multiple-Choice Knapsack Algorithm** to select the combination of cooling solutions across all parks that maximizes total cooling benefit while staying within budget. One solution per park, never exceeds budget.
 
 ---
 
 ## 🌍 Global Potential: Real-World Impact in South Asia
 
-While modeled using Phoenix datasets as a primary baseline, ParkSense is designed for universal geographic adaptability. It has immense potential in the Global South, particularly in South Asia (e.g., India, Pakistan, Bangladesh):
+While built for Phoenix, ParkSense is designed for universal geographic adaptability — especially impactful in South Asia (India, Pakistan, Bangladesh):
 
-* **Extreme Climate Vulnerability**: South Asian urban centers frequently face prolonged heatwaves with wet-bulb temperatures reaching dangerous thresholds (exceeding 45°C - 50°C), resulting in severe health crises for dense populations.
-* **Tight Budget Scarcity**: Unlike wealthy western municipalities, cities in South Asia work with extremely constrained budgets. The **Knapsack Budget Optimization Engine** represents the true value of this project: it mathematically calculates how to achieve the absolute maximum cooling benefit (e.g., opting for cost-effective native trees like Neem or Banyan versus expensive structures) within tight, realistic budget boundaries.
-* **Socioeconomic Prioritization**: By modifying the scoring weight configurations, cities can incorporate high-density slum data and local socio-economic demographics into the priority scorer, routing cooling resources directly to communities that lack indoor air conditioning—saving lives where it matters most.
+* **Extreme Heat Vulnerability**: South Asian cities face deadly heatwaves exceeding 45–50°C, with dense populations lacking indoor cooling.
+* **Budget Scarcity**: The Knapsack Budget Optimizer is most valuable where budgets are tightest — it mathematically ensures every dollar achieves maximum cooling impact.
+* **Socioeconomic Targeting**: By adjusting scoring weights, cities can route cooling resources to communities that need them most.
 
 ---
 
 ## 🏗️ Architecture & Technology Stack
 
-ParkSense is built with a modern, reactive single-page architecture utilizing Laravel 11 and Inertia.js with Vue 3.
-
 ```
 ┌─────────────────────────────────────────────────────────────────┐
 │                       Frontend Layer                            │
 │    Vue 3 (Composition API) + TypeScript + Tailwind CSS v4       │
-│    Shadcn/UI Components + Google Maps JavaScript API (Loader)   │
+│    Shadcn/UI Components + Google Maps JavaScript API            │
 └─────────────────────────────────┬───────────────────────────────┘
                                   │ Inertia.js Bridge
 ┌─────────────────────────────────▼───────────────────────────────┐
 │                       Backend Layer (PHP 8.2+)                  │
-│    Laravel 11 Application Framework + Service-Calculator Pattern│
-│    Eloquent Spatial (MySQL Spatial ST_Intersects / Geometry)    │
+│    Laravel 11 + Service-Calculator Pattern                      │
+│    Eloquent Spatial (MySQL ST_Intersects / Geometry)            │
 └──────────────┬──────────────────────────────────┬───────────────┘
                │                                  │
 ┌──────────────▼──────────────┐    ┌──────────────▼───────────────┐
@@ -133,100 +117,34 @@ ParkSense is built with a modern, reactive single-page architecture utilizing La
 │  - FortyGuard Heatmap API   │    │  - MySQL 8.0+ / Spatial GIS  │
 │  - FortyGuard Satellite API │    │  - Spatial Geometry Indexing │
 │  - FortyGuard Env API       │    │  - Full Relational Cascade   │
-│  - Google Maps Maps/Drawing │    └──────────────────────────────┘
+│  - Google Maps Drawing      │    └──────────────────────────────┘
 └─────────────────────────────┘
 ```
 
 ### Core Technologies
-- **Backend Framework**: [Laravel 11](https://laravel.com/) with dedicated Action classes and Domain Services.
-- **Frontend Framework**: [Vue 3](https://vuejs.org/) (Script Setup, Composition API, TypeScript).
-- **SPA Bridge**: [Inertia.js v2](https://inertiajs.com/) for fluid client-side routing without API boilerplate.
-- **Styling**: [Tailwind CSS v4](https://tailwindcss.com/) with curated shadcn-vue primitives.
-- **Spatial Engine**: `matanyadaev/laravel-eloquent-spatial` for native MySQL OpenGIS operations.
-- **External Integration**: Dedicated FortyGuard Client with retry handlers and asynchronous polling composables.
-
----
-
-## 🔍 Key Features & Analysis Pipeline
-
-| Feature | Description | Technical Component | Documentation |
-| :--- | :--- | :--- | :--- |
-| **Park Spatial Boundary Ingestion** | 189 flatland Phoenix parks stored as native polygon geometries. | `Park` Model, `matanyadaev/laravel-eloquent-spatial` | [Parks Data](README_PARKS_DATA.md) |
-| **Heat Analysis & AOI Mapping** | Polygon drawing on Google Maps, AOI spatial intersection, and 60m TCM thermal tile aggregation. | `SendFortyGuardHeatmapRequest`, `ParkHeatAnalysisService` | [Heat Analysis](README_HEAT_ANALYSIS.md) |
-| **Environmental & Satellite Profiling** | Asynchronous retrieval of heat index, humidity, solar GHI, and AI satellite land-cover segmentation. | `EnvironmentalAnalysisService`, `SatelliteAnalysisService` | [Env & Sat Analysis](README_ENV_SAT_ANALYSIS.md) |
-| **5-Factor Priority Scoring** | Normalization of multi-sensor data into composite urgency scores (0–100). | `ParkPriorityScoreService`, Domain Calculators | [Priority Scoring](README_PRIORITY_SCORING.md) |
-| **Cooling Recommendations** | Rule-based selection of tree packages, shade ramadas, and cool pavements with Phoenix-verified costs. | `InterventionSelectionService`, `CoolingBenefitHelper` | [Cooling Solutions](README_COOLING_SOLUTIONS.md) |
-| **Knapsack Budget Optimization** | Dynamic programming algorithm solving the multi-choice knapsack problem under fixed budget caps. | `BudgetOptimizerService`, `InvestmentController` | [Budget Optimization](README_BUDGET_OPTIMIZATION.md) |
+- **Backend**: [Laravel 11](https://laravel.com/) with Action classes and Domain Services
+- **Frontend**: [Vue 3](https://vuejs.org/) (Composition API, TypeScript)
+- **SPA Bridge**: [Inertia.js v2](https://inertiajs.com/)
+- **Styling**: [Tailwind CSS v4](https://tailwindcss.com/) + shadcn-vue
+- **Spatial**: `matanyadaev/laravel-eloquent-spatial` for MySQL OpenGIS
+- **APIs**: FortyGuard Client with retry handlers + async polling composables
 
 ---
 
 ## 📊 Data Sources & Evidence Framework
 
-ParkSense maintains strict transparency by classifying all figures into three distinct evidence tiers:
+All numbers in ParkSense are classified by evidence level:
 
-```
-┌─────────────────────────────────────────────────────────────────────────────┐
-│ 🟢 Level 1: Phoenix Verified                                                │
-│ Official municipal reports, voter-approved bonds, and City of Phoenix plans.│
-│ Examples: $1,050 tree upfront cost, $40k–$80k ramadas, $1.5M NPEP reference │
-├─────────────────────────────────────────────────────────────────────────────┤
-│ 🟡 Level 2: Planning Assumptions                                            │
-│ Transparent engineering and modeling parameters for scenario optimization.  │
-│ Examples: 10% hard surface cool pavement, tree package sizes (25/50/100)    │
-├─────────────────────────────────────────────────────────────────────────────┤
-│ 🔵 Level 3: FortyGuard Measured Data                                        │
-│ High-resolution empirical sensor readings and multi-spectral AI segmentations│
-│ Examples: 60m thermal tiles, land-cover percentages, GHI solar irradiance   │
-└─────────────────────────────────────────────────────────────────────────────┘
-```
+| Level | Label | Examples |
+|-------|-------|----------|
+| 🟢 | **Phoenix Verified** | $1,050/tree, $40K–$80K ramadas, $1.5M NPEP budget |
+| 🟡 | **Planning Assumptions** | 10% cool pavement coverage, tree package sizes, rule thresholds |
+| 🔵 | **FortyGuard Measured** | 60m thermal tiles, land-cover %, solar GHI |
 
-### Primary Reference Documents
-1. **City of Phoenix Shade Phoenix Plan**: Verified tree purchase ($750), labor, irrigation ($300), and water maintenance calculations. ([PDF Link](https://www.phoenix.gov/content/dam/phoenix/heatsite/documents/BP_ShadePhoenixPlan_Report_031025_EN.pdf))
-2. **City of Phoenix Neighborhood Parks Enhancement Program (NPEP)**: Verified ramada cost ranges and standard $1.5M program funding reference. ([Link](https://www.phoenix.gov/administration/departments/parks/about-us/improvement-projects/neighborhood-parks-enhancement-program.html))
-3. **ASU / City of Phoenix Cool Pavement Study**: Surface temperature reduction measurements on treated pavements.
-4. **NWS Phoenix Climate Records & NOAA**: Summer climate baseline thresholds (30°C–45°C normalization).
-
----
-
-## 🔄 System Workflow
-
-```mermaid
-sequenceDiagram
-    autonumber
-    actor User as City Planner / User
-    participant Map as Google Map / Dashboard
-    participant Backend as Laravel Application
-    participant FG as FortyGuard API
-    participant DB as MySQL Database
-
-    User->>Map: Draws Area of Interest (AOI) Polygon
-    Map->>Backend: POST /parks/polygon
-    Backend->>DB: Intersect AOI with Park Geometries (ST_Intersects)
-    Backend->>FG: Submit Heatmap Analysis (60m TCM)
-    Backend-->>Map: Returns Activity ID
-    Map->>Backend: Polls status until completed
-    Backend->>FG: Fetch completed Heatmap tiles
-    Backend->>DB: Store tiles & compute Park Heat metrics
-    
-    Note over User,Backend: Redirect to Heat Analysis Detail Page
-    
-    User->>Backend: Run Environmental & Satellite Analysis
-    Backend->>FG: Submit requests for top hottest parks
-    Backend->>DB: Store Environmental & Satellite Metric payloads
-    
-    User->>Backend: POST /priority-scores/calculate/{id}
-    Backend->>Backend: Execute 5-Factor Weighted Calculation
-    Backend->>DB: Persist ParkPriorityScore records
-    
-    User->>Backend: POST /interventions/generate/{id}
-    Backend->>Backend: Evaluate Rule Catalog against park conditions
-    Backend->>DB: Save InterventionRecommendation records
-    
-    User->>Backend: POST /investments/optimize/{id}?budget=1500000
-    Backend->>Backend: Execute Knapsack DP Optimizer
-    Backend->>DB: Store InvestmentPlan & InvestmentPlanItems
-    Backend-->>User: Render Interactive Investment Dashboard
-```
+**Primary References:**
+1. [Phoenix Shade Plan](https://www.phoenix.gov/content/dam/phoenix/heatsite/documents/BP_ShadePhoenixPlan_Report_031025_EN.pdf) — Tree costs ($750 + $300 irrigation)
+2. [Phoenix NPEP](https://www.phoenix.gov/administration/departments/parks/about-us/improvement-projects/neighborhood-parks-enhancement-program.html) — Ramada costs, $1.5M program budget
+3. ASU / City of Phoenix Cool Pavement Study — Surface temperature reduction data
 
 ---
 
@@ -250,117 +168,51 @@ parksense/
 
 ---
 
-## ⚙️ Configuration Reference
-
-### `config/park_heat.php`
-Centralizes all numerical weights, climate thresholds, and intervention catalogs:
-- **`priority_weights`**:
-  - `heat_severity`: `0.40` (40%)
-  - `environmental_stress`: `0.20` (20%)
-  - `physical_condition`: `0.15` (15%)
-  - `park_importance`: `0.15` (15%)
-  - `intervention_opportunity`: `0.10` (10%)
-- **`temperature_thresholds`**: `min: 30°C`, `max: 45°C` (Phoenix summer range).
-- **`interventions.catalog`**: Phoenix-verified unit costs for `tree_planting`, `ramada`, and `cool_pavement`.
-
----
-
 ## 💻 Local Development Setup
 
 ### Prerequisites
-- **PHP**: 8.2 or higher
-- **Composer**: 2.x
-- **Node.js**: 20.x or higher (with npm or pnpm)
-- **MySQL**: 8.0+ (required for native spatial geometry support)
+- **PHP**: 8.2+, **Composer**: 2.x, **Node.js**: 20+, **MySQL**: 8.0+
 
-### Installation Steps
-
-1. **Clone the repository**:
-   ```bash
-   git clone https://github.com/hamza094/parksense.git
-   cd parksense
-   ```
-
-2. **Install PHP and Node dependencies**:
-   ```bash
-   composer install
-   npm install
-   ```
-
-3. **Configure Environment File**:
-   ```bash
-   cp .env.example .env
-   php artisan key:generate
-   ```
-
-4. **Set Environment Variables in `.env`**:
-   ```env
-   APP_NAME=ParkSense
-   APP_URL=http://parksense.test
-
-   DB_CONNECTION=mysql
-   DB_HOST=127.0.0.1
-   DB_PORT=3306
-   DB_DATABASE=parksense
-   DB_USERNAME=root
-   DB_PASSWORD=
-
-   # External API Keys
-   VITE_GOOGLE_MAPS_API_KEY=your_google_maps_api_key_here
-   FORTYGUARD_API_KEY=your_fortyguard_api_key_here
-   FORTYGUARD_BASE_URL=https://api.fortyguard.com
-   ```
-
-5. **Run Migrations & Seed Phoenix Parks**:
-   ```bash
-   php artisan migrate --seed
-   ```
-
-6. **Start Local Development Servers**:
-   ```bash
-   # Run Vite and Laravel concurrently
-   npm run dev
-   php artisan serve
-   ```
-
----
-
-## 🧪 Testing & Validation
-
-Execute automated tests and validation scripts:
+### Installation
 
 ```bash
-# Run PHPUnit / Pest tests
-php artisan test
+git clone https://github.com/hamza094/parksense.git
+cd parksense
+composer install && npm install
+cp .env.example .env && php artisan key:generate
+```
 
-# Check TypeScript typing
-npm run types:check
+Set in `.env`:
+```env
+VITE_GOOGLE_MAPS_API_KEY=your_google_maps_api_key
+FORTYGUARD_API_KEY=your_fortyguard_api_key
+FORTYGUARD_BASE_URL=https://api.fortyguard.com
+```
 
-# Validate environmental metric distributions
-php analyze_environmental_metrics.php
-
-# Validate satellite metric segmentation
-php analyze_satellite_metrics.php
+```bash
+php artisan migrate --seed    # Seeds 189 Phoenix flatland parks
+npm run dev                   # Start Vite dev server
+php artisan serve             # Start Laravel server
 ```
 
 ---
 
-## 📚 Specialized Documentation Links
+## 📚 Specialized Documentation
 
-For in-depth mathematical formulas, municipal citations, and technical deep-dives:
+For detailed technical deep-dives into each pipeline step:
 
-- [📍 Phoenix Parks Foundation Data](README_PARKS_DATA.md) — Boundary definitions, GIS attributes, and flatland park filtering rationale.
-- [🗺️ Heat Analysis & Thermal Mapping](README_HEAT_ANALYSIS.md) — 60m TCM parameters, tile-park matching, and bounding box algorithms.
-- [🌡️ Environmental & Satellite Profiling](README_ENV_SAT_ANALYSIS.md) — Microclimate stress metrics and AI satellite segmentation.
-- [🎯 5-Factor Priority Scoring Model](README_PRIORITY_SCORING.md) — Full mathematical normalization equations and factor breakdown.
-- [🛠️ Cooling Solutions & Catalog](README_COOLING_SOLUTIONS.md) — Phoenix Shade Plan costs, rule triggers, and research citations.
-- [💰 Knapsack Budget Optimization](README_BUDGET_OPTIMIZATION.md) — Dynamic programming logic, scale factors, and $1.5M NPEP scenarios.
+- [📍 Phoenix Parks Data](README_PARKS_DATA.md) — 189 flatland parks, GIS boundaries, filtering rationale
+- [🗺️ Heat Analysis](README_HEAT_ANALYSIS.md) — 60m TCM thermal tiles, tile-park matching
+- [🌡️ Environmental & Satellite Analysis](README_ENV_SAT_ANALYSIS.md) — Microclimate metrics, AI land-cover segmentation
+- [🎯 Priority Scoring](README_PRIORITY_SCORING.md) — 5-factor weighted scoring model
+- [🛠️ Cooling Solutions](README_COOLING_SOLUTIONS.md) — Rule-based recommendations, Phoenix-verified costs
+- [💰 Budget Optimization](README_BUDGET_OPTIMIZATION.md) — Knapsack algorithm, $1.5M NPEP scenarios
 
 ---
 
 ## 📜 License & Attributions
 
-- **License**: Proprietary / Educational Research Project.
-- **Municipal Data**: City of Phoenix Open GIS Data & Street Transportation / Parks and Recreation Departments.
-- **Thermal & Segmentation Models**: Powered by [FortyGuard](https://fortyguard.com/) Urban Thermal APIs.
-- **Mapping**: Google Maps JavaScript API.
+- **License**: Proprietary / Educational Research Project
+- **Municipal Data**: City of Phoenix Open GIS Data & Parks and Recreation Department
+- **Thermal & Segmentation Models**: Powered by [FortyGuard](https://fortyguard.com/) Urban Thermal APIs
+- **Mapping**: Google Maps JavaScript API
