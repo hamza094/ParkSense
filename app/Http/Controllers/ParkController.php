@@ -222,7 +222,7 @@ class ParkController extends Controller
             $response = $fortyGuard->getStatus($activityId);
             
             // Update heatmap analysis record if status is Completed using action class
-            if ($response['data']['status'] === 'Completed') {
+            if (strtolower($response['data']['status']) === 'completed') {
                 $manageHeatmap = new ManageHeatmapAnalysis();
                 $manageHeatmap->markAsCompleted($activityId, $response['data']);
                 
@@ -233,12 +233,12 @@ class ParkController extends Controller
                 }
             }
             
-            if ($response['data']['status'] === 'Completed' || $response['data']['status'] === 'Failed') {
+            if (strtolower($response['data']['status']) === 'completed' || strtolower($response['data']['status']) === 'failed') {
                 // Cache the result for 24 hours
                 cache()->put($cacheKey, $response, now()->addHours(24));
                 
                 // Cache the latest activity_id for heat analysis (user-scoped)
-                if ($response['data']['status'] === 'Completed') {
+                if (strtolower($response['data']['status']) === 'completed') {
                     cache()->put('latest_heatmap_activity_id_' . auth()->id(), $activityId, now()->addHours(24));
                 }
             }
@@ -253,33 +253,47 @@ class ParkController extends Controller
     }
 
     /**
-     * Run park heat analysis for latest completed heatmap
+     * Run park heat analysis for specific heatmap or latest completed heatmap
      */
     public function runHeatAnalysis(Request $request)
     {
         try {
-            // Get the latest activity_id from cache (user-scoped)
-            $latestActivityId = cache()->get('latest_heatmap_activity_id_' . auth()->id());
+            // Check if a specific heatmap analysis ID was provided
+            $heatmapAnalysisId = $request->input('heatmap_analysis_id');
             
-            // Fallback: if cache is empty, get from database using raw SQL to avoid memory issues
-            if (!$latestActivityId) {
-                $result = DB::selectOne('SELECT activity_id FROM heatmap_analyses WHERE status = ? AND map_data IS NOT NULL ORDER BY id DESC LIMIT 1', ['completed']);
+            if ($heatmapAnalysisId) {
+                // Process the specific heatmap analysis requested
+                $analysis = HeatmapAnalysis::find($heatmapAnalysisId);
                 
-                if ($result) {
-                    $latestActivityId = $result->activity_id;
-                    // Cache it for future use
-                    cache()->put('latest_heatmap_activity_id_' . auth()->id(), $latestActivityId, now()->addHours(24));
+                if (!$analysis) {
+                    return response()->json([
+                        'error' => 'Heatmap analysis not found.',
+                    ], 404);
                 }
-            }
-            
-            if (!$latestActivityId) {
-                return response()->json([
-                    'error' => 'No recent heatmap analysis found. Please draw a polygon first.',
-                ], 404);
-            }
+            } else {
+                // Fallback: Get the latest activity_id from cache (user-scoped)
+                $latestActivityId = cache()->get('latest_heatmap_activity_id_' . auth()->id());
+                
+                // Fallback: if cache is empty, get from database using raw SQL to avoid memory issues
+                if (!$latestActivityId) {
+                    $result = DB::selectOne('SELECT activity_id FROM heatmap_analyses WHERE status = ? AND map_data IS NOT NULL ORDER BY id DESC LIMIT 1', ['completed']);
+                    
+                    if ($result) {
+                        $latestActivityId = $result->activity_id;
+                        // Cache it for future use
+                        cache()->put('latest_heatmap_activity_id_' . auth()->id(), $latestActivityId, now()->addHours(24));
+                    }
+                }
+                
+                if (!$latestActivityId) {
+                    return response()->json([
+                        'error' => 'No recent heatmap analysis found. Please draw a polygon first.',
+                    ], 404);
+                }
 
-            // Load the analysis by activity_id directly (avoid any sorting)
-            $analysis = HeatmapAnalysis::where('activity_id', $latestActivityId)->first();
+                // Load the analysis by activity_id directly (avoid any sorting)
+                $analysis = HeatmapAnalysis::where('activity_id', $latestActivityId)->first();
+            }
 
             if (!$analysis || !$analysis->map_data) {
                 return response()->json([
@@ -294,6 +308,13 @@ class ParkController extends Controller
             
             // Get parks that were in the AOI
             $parkIds = $analysis->park_ids ?? [];
+            
+            if (empty($parkIds)) {
+                return response()->json([
+                    'error' => 'No parks in heatmap analysis. Park IDs array is empty.',
+                ], 404);
+            }
+            
             $parks = Park::whereIn('id', $parkIds)->get();
             
             // Process each park

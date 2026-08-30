@@ -33,17 +33,39 @@ export function useHeatmapPolling(initialResult: any = null) {
                 
                 const status = data?.data?.status;
                 
-                if (status === 'Completed' || status === 'Failed') {
-                    if (status === 'Completed' && data?.data?.result) {
+                if (status?.toLowerCase() === 'completed' || status?.toLowerCase() === 'failed') {
+                    if (status?.toLowerCase() === 'completed' && data?.data?.result) {
                         heatmapResult.value = data.data.result;
                         
-                        // Navigate to heat analysis detail page if ID is available
+                        // Run park heat analysis automatically before redirecting
                         const heatmapAnalysisId = data?.data?.heatmap_analysis_id;
                         if (heatmapAnalysisId) {
-                            router.flash('message', 'Heatmap processing completed! Redirecting to analysis detail...');
-                            setTimeout(() => {
-                                router.visit(`/heat-analyses/${heatmapAnalysisId}`);
-                            }, 1500);
+                            router.flash('message', 'Heatmap processing completed! Running park heat analysis...');
+                            
+                            // Run park heat analysis
+                            const analysisHttp = useHttp({});
+                            analysisHttp.post(`/parks/run-heat-analysis?heatmap_analysis_id=${heatmapAnalysisId}`, {
+                                onSuccess: (parkData: any) => {
+                                    router.flash('message', 'Park heat analysis completed! Redirecting to analysis detail...');
+                                    setTimeout(() => {
+                                        router.visit(`/heat-analyses/${heatmapAnalysisId}`);
+                                    }, 1500);
+                                },
+                                onHttpException: (response: any) => {
+                                    console.error('Park heat analysis failed:', response.status);
+                                    router.flash('error', 'Park heat analysis failed. Redirecting anyway...');
+                                    setTimeout(() => {
+                                        router.visit(`/heat-analyses/${heatmapAnalysisId}`);
+                                    }, 1500);
+                                },
+                                onNetworkError: (error: any) => {
+                                    console.error('Network error during park heat analysis:', error.message);
+                                    router.flash('error', 'Network error during park heat analysis. Redirecting anyway...');
+                                    setTimeout(() => {
+                                        router.visit(`/heat-analyses/${heatmapAnalysisId}`);
+                                    }, 1500);
+                                }
+                            });
                         } else {
                             // Fallback to reload if ID is not available
                             router.flash('message', 'Heatmap processing completed! Reloading to show new analysis...');
@@ -51,7 +73,7 @@ export function useHeatmapPolling(initialResult: any = null) {
                                 router.reload();
                             }, 1500);
                         }
-                    } else if (status === 'Failed') {
+                    } else if (status?.toLowerCase() === 'failed') {
                         router.flash('error', 'Heatmap processing failed.');
                     }
                     

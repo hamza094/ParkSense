@@ -11,6 +11,9 @@ use Illuminate\Support\Facades\Route;
 
 Route::inertia('/', 'Welcome')->name('home');
 
+// API endpoint for GeoJSON data (avoids Inertia timeout with large payloads)
+Route::get('api/heat-analyses/{id}/geojson', [HeatAnalysisDetailController::class, 'getGeoJson'])->name('heat-analyses.geojson');
+
 Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('dashboard', [ParkController::class, 'index'])->name('dashboard');
     Route::get('heat-analyses/{id}', [HeatAnalysisDetailController::class, 'show'])->name('heat-analyses.show');

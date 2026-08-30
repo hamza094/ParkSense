@@ -28,7 +28,9 @@ class HeatAnalysisDetailController extends Controller
             ->get();
 
         // Use the original map_data directly for the map (already in correct GeoJSON format)
-        $heatmapTiles = $heatAnalysis->map_data ?? null;
+        // Load GeoJSON via API endpoint to avoid Inertia timeout with large payloads
+        $heatmapTiles = null; // Don't load GeoJSON through Inertia props
+        $hasHeatmapData = !empty($heatAnalysis->map_data);
 
         // Get only the parks relevant to this heat analysis
         $parkIds = $heatAnalysis->park_ids ?? [];
@@ -304,8 +306,9 @@ class HeatAnalysisDetailController extends Controller
                 'created_at' => $heatAnalysis->created_at->toISOString(),
                 'status' => $heatAnalysis->status,
                 'activity_id' => $heatAnalysis->activity_id,
+                'has_heatmap_data' => $hasHeatmapData,
             ],
-            'heatmapGeoJson' => $heatmapTiles, // Use original map_data format
+            'heatmapGeoJson' => $heatmapTiles, // Now null to avoid timeout
             'parks' => $parks,
             'environmentalResults' => $environmentalResults,
             'satelliteResults' => $satelliteResults,
@@ -316,6 +319,16 @@ class HeatAnalysisDetailController extends Controller
             'budgetOptimizationOverview' => $budgetOptimizationOverview,
             'investmentPlan' => $investmentPlan,
         ]);
+    }
+
+    /**
+     * Get GeoJSON data for heat analysis (avoids Inertia timeout with large payloads)
+     */
+    public function getGeoJson($id)
+    {
+        $heatAnalysis = HeatmapAnalysis::findOrFail($id);
+        
+        return response()->json($heatAnalysis->map_data);
     }
 
 }

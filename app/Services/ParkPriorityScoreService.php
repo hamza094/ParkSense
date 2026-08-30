@@ -51,23 +51,29 @@ class ParkPriorityScoreService
             );
         }
 
+        // 🚀 OPTIMIZATION: Fetch all metrics in two queries instead of 2 * N queries
+        // Get all completed environmental metrics and group by park_id, keeping the latest per park
+        $allEnvironmental = EnvironmentalMetric::query()
+            ->where('heatmap_analysis_id', $heatmapAnalysisId)
+            ->where('status', 'completed')
+            ->get()
+            ->groupBy('park_id')
+            ->map(fn ($group) => $group->sortByDesc('id')->first());
+
+        // Get all completed satellite metrics and group by park_id, keeping the latest per park
+        $allSatellite = SatelliteMetric::query()
+            ->where('heatmap_analysis_id', $heatmapAnalysisId)
+            ->where('status', 'completed')
+            ->get()
+            ->groupBy('park_id')
+            ->map(fn ($group) => $group->sortByDesc('id')->first());
+
         $results = collect();
 
         foreach ($heatAnalyses as $heatAnalysis) {
-            // Only process parks with complete environmental and satellite data
-            $environmental = EnvironmentalMetric::query()
-                ->where('park_id', $heatAnalysis->park_id)
-                ->where('heatmap_analysis_id', $heatmapAnalysisId)
-                ->where('status', 'completed')
-                ->latest('id')
-                ->first();
-
-            $satellite = SatelliteMetric::query()
-                ->where('park_id', $heatAnalysis->park_id)
-                ->where('heatmap_analysis_id', $heatmapAnalysisId)
-                ->where('status', 'completed')
-                ->latest('id')
-                ->first();
+            // 🚀 OPTIMIZATION: In-memory lookup
+            $environmental = $allEnvironmental->get($heatAnalysis->park_id);
+            $satellite = $allSatellite->get($heatAnalysis->park_id);
 
             // Skip parks without complete data
             if (!$environmental || !$satellite) {

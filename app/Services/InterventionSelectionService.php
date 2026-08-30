@@ -60,14 +60,16 @@ class InterventionSelectionService
         /*
          * Pull the physical metrics created in Phase 8.
          */
-        $satellite = $score->satelliteMetric;
-
         $vegetation = (float) (
-            $satellite?->data['calculation']['vegetation_percent'] ?? 0
+            $score->calculation_data['physical']['vegetation_percent'] 
+            ?? $score->satelliteMetric?->data['calculation']['vegetation_percent'] 
+            ?? 0
         );
 
         $hardSurface = (float) (
-            $satellite?->data['calculation']['hard_surface_percent'] ?? 0
+            $score->calculation_data['physical']['hard_surface_percent'] 
+            ?? $score->satelliteMetric?->data['calculation']['hard_surface_percent'] 
+            ?? 0
         );
 
         $recommendations = collect();
@@ -285,9 +287,10 @@ class InterventionSelectionService
         } elseif ($key === 'cool_pavement') {
             // For cool pavement, we'll estimate based on hard surface percentage
             // This is a planning assumption - clearly labeled
-            $satellite = $score->satelliteMetric;
             $hardSurfacePercent = (float) (
-                $satellite?->data['calculation']['hard_surface_percent'] ?? 0
+                $score->calculation_data['physical']['hard_surface_percent']
+                ?? $score->satelliteMetric?->data['calculation']['hard_surface_percent']
+                ?? 0
             );
             // Estimate 10% of hard surface gets treatment (planning assumption)
             $parkAcres = $score->park->acres ?? 0;

@@ -41,7 +41,7 @@ class SatelliteAnalysisController extends Controller
             $status = $this->service->checkStatus($activityId);
 
             // If analysis is completed, save the result to database
-            if ($status['data']['status'] === 'Completed' && isset($status['data']['result'])) {
+            if (strtolower($status['data']['status']) === 'completed' && isset($status['data']['result'])) {
                 try {
                     $this->service->saveResultByActivityId($activityId, $status['data']['result']);
                 } catch (\Exception $e) {
@@ -56,7 +56,7 @@ class SatelliteAnalysisController extends Controller
             }
 
             // If analysis failed, mark record as failed
-            if ($status['data']['status'] === 'Failed') {
+            if (strtolower($status['data']['status']) === 'failed') {
                 try {
                     $this->service->markAsFailed($activityId);
                 } catch (\Exception $e) {

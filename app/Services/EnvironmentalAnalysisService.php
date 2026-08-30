@@ -86,7 +86,7 @@ class EnvironmentalAnalysisService
             throw new \Exception('Heatmap analysis not found. Please provide a valid analysis ID.');
         }
 
-        if ($analysis->status !== 'Completed') {
+        if ($analysis->status !== 'completed') {
             throw new \Exception('Heatmap analysis must be completed before running environmental analysis.');
         }
 

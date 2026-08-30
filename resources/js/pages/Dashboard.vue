@@ -107,7 +107,7 @@ defineOptions({
                         >
                             <div class="flex justify-between items-start mb-2">
                                 <h3 class="font-semibold">Heat Analysis #{{ analysis.id }}</h3>
-                                <Badge :variant="analysis.status === 'Completed' ? 'default' : 'secondary'">
+                                <Badge :variant="analysis.status?.toLowerCase() === 'completed' ? 'default' : 'secondary'">
                                     {{ analysis.status }}
                                 </Badge>
                             </div>

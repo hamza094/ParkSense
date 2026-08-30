@@ -1,18 +1,19 @@
 <script setup lang="ts">
 import { Head } from '@inertiajs/vue3';
-import { ref } from 'vue';
-import { router } from '@inertiajs/vue3';
+import { ref, onMounted, onUnmounted } from 'vue';
+import { router, useHttp } from '@inertiajs/vue3';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
-import { ArrowLeft, Loader2, Leaf, Satellite, Star, Lightbulb, DollarSign, Info } from '@lucide/vue';
+import { ArrowLeft, Loader2, Leaf, Satellite, Star, Lightbulb, DollarSign, Info as InfoIcon } from '@lucide/vue';
 import GoogleMap from '@/components/GoogleMap.vue';
+import { useAnalysisOrchestrator } from '@/composables/useAnalysisOrchestrator';
+import { useBudgetOptimization } from '@/composables/useBudgetOptimization';
 import { useEnvironmentalAnalysis } from '@/composables/useEnvironmentalAnalysis';
 import { useSatelliteAnalysis } from '@/composables/useSatelliteAnalysis';
 import { usePriorityScoring } from '@/composables/usePriorityScoring';
 import { useInterventionRecommendations } from '@/composables/useInterventionRecommendations';
-import { useBudgetOptimization } from '@/composables/useBudgetOptimization';
 
 const props = defineProps<{
     heatAnalysis: {
@@ -22,6 +23,7 @@ const props = defineProps<{
         created_at: string;
         status: string;
         activity_id: string;
+        has_heatmap_data: boolean;
     };
     heatmapGeoJson?: {
         type: string;
@@ -91,8 +93,25 @@ const props = defineProps<{
     investmentPlan: any;
 }>();
 
-const budget = ref<number>(100000);
+const budget = ref<number>(1500000); // Phoenix NPEP reference budget
 const googleMapsApiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY || '';
+const heatmapGeoJson = ref(props.heatmapGeoJson || null);
+const showBudgetMethodology = ref(true);
+const showInterventionMethodology = ref(true);
+const showEnvironmentalMethodology = ref(true);
+const showSatelliteMethodology = ref(true);
+const showPriorityMethodology = ref(true);
+
+// Budget scenarios based on Phoenix funding references
+const budgetScenarios = [
+    { name: 'Small Project', amount: 250000, description: 'Good for testing with smaller budgets' },
+    { name: 'Medium Investment', amount: 500000, description: 'Moderate budget for several park improvements' },
+    { name: 'Phoenix NPEP Reference', amount: 1500000, description: 'Based on Phoenix\'s $1.5M neighborhood park program' },
+];
+
+const setBudgetScenario = (amount: number) => {
+    budget.value = amount;
+};
 
 // Helper function to calculate average from array of values
 const getAverageValue = (values: any) => {
@@ -105,31 +124,110 @@ const getAverageValue = (values: any) => {
 };
 
 // Composables
-const { runEnvironmentalAnalysis, loading: environmentalLoading } = useEnvironmentalAnalysis();
-const { runSatelliteAnalysis, loading: satelliteLoading } = useSatelliteAnalysis();
-const { calculatePriorityScores, loading: priorityLoading } = usePriorityScoring();
-const { generateRecommendations, loading: interventionLoading } = useInterventionRecommendations();
+const { 
+    currentStep, 
+    stepStatus, 
+    runSequentialAnalysis,
+    getProgressPercentage,
+    getStepLabel,
+    environmentalLoading,
+    satelliteLoading,
+    priorityLoading,
+    interventionLoading,
+    cancelAllPolling
+} = useAnalysisOrchestrator();
+
+const { runEnvironmentalAnalysis } = useEnvironmentalAnalysis();
+const { runSatelliteAnalysis } = useSatelliteAnalysis();
+const { calculatePriorityScores } = usePriorityScoring();
+const { generateRecommendations } = useInterventionRecommendations();
 const { optimizeBudget, loading: budgetLoading } = useBudgetOptimization();
+const http = useHttp({});
 
 // Handlers
-const handleRunEnvironmental = () => {
-    runEnvironmentalAnalysis(props.heatAnalysis.id);
+const handleRunEnvironmental = async () => {
+    try {
+        await runEnvironmentalAnalysis(props.heatAnalysis.id);
+        router.reload();
+    } catch (error) {
+        console.error('Environmental analysis failed:', error);
+    }
 };
 
-const handleRunSatellite = () => {
-    runSatelliteAnalysis(props.heatAnalysis.id);
+const handleRunSatellite = async () => {
+    try {
+        await runSatelliteAnalysis(props.heatAnalysis.id);
+        router.reload();
+    } catch (error) {
+        console.error('Satellite analysis failed:', error);
+    }
 };
 
-const handleCalculatePriority = () => {
-    calculatePriorityScores(props.heatAnalysis.id);
+const handleCalculatePriority = async () => {
+    try {
+        await calculatePriorityScores(props.heatAnalysis.id);
+        router.reload();
+    } catch (error) {
+        console.error('Priority scoring failed:', error);
+    }
 };
 
-const handleGenerateRecommendations = () => {
-    generateRecommendations(props.heatAnalysis.id);
+const handleGenerateRecommendations = async () => {
+    try {
+        await generateRecommendations(props.heatAnalysis.id);
+        router.reload();
+    } catch (error) {
+        console.error('Intervention recommendations failed:', error);
+    }
 };
 
 const handleOptimizeBudget = () => {
     optimizeBudget(props.heatAnalysis.id, budget.value);
+};
+
+// Auto-run analysis on component mount
+onMounted(async () => {
+    // Fetch GeoJSON data asynchronously to avoid Inertia timeout
+    if (props.heatAnalysis.has_heatmap_data && !heatmapGeoJson.value) {
+        try {
+            const response = await fetch(`/api/heat-analyses/${props.heatAnalysis.id}/geojson`);
+            if (response.ok) {
+                heatmapGeoJson.value = await response.json();
+            }
+        } catch (error) {
+            console.error('Failed to load GeoJSON:', error);
+        }
+    }
+
+    // Don't auto-run - let user manually trigger analysis using the buttons
+    // This gives users control and prevents unexpected background processing
+});
+
+// Cleanup polling when component unmounts
+onUnmounted(() => {
+    cancelAllPolling();
+});
+
+const runParkHeatAnalysis = async (heatmapAnalysisId: number) => {
+    return new Promise((resolve) => {
+        http.post(`/parks/run-heat-analysis?heatmap_analysis_id=${heatmapAnalysisId}`, {
+            onSuccess: (data: any) => {
+                console.log('Park heat analysis completed:', data);
+                resolve(data);
+            },
+            onHttpException: (response: any) => {
+                console.error('Park heat analysis failed:', response.status);
+                console.error('Error data:', response.data);
+                // Don't throw - we'll try to proceed anyway
+                resolve(null);
+            },
+            onNetworkError: (error: any) => {
+                console.error('Park heat analysis network error:', error.message);
+                // Don't throw - we'll try to proceed anyway
+                resolve(null);
+            }
+        });
+    });
 };
 
 const goBack = () => {
@@ -147,6 +245,45 @@ const formatEvidenceType = (evidenceType: string) => {
         'planning_assumption': 'Planning Assumption',
     };
     return typeMap[evidenceType] || 'Unknown';
+};
+
+// Helper functions for satellite segmentation data
+const calculateVegetationPercent = (segments: any) => {
+    if (!segments) return 'N/A';
+    
+    const vegetationClasses = ['tree', 'plant', 'grass'];
+    let vegetation = 0;
+    
+    for (const [className, percentage] of Object.entries(segments)) {
+        const classLower = className.toLowerCase();
+        for (const vegClass of vegetationClasses) {
+            if (classLower.includes(vegClass.toLowerCase())) {
+                vegetation += parseFloat(percentage) || 0;
+                break;
+            }
+        }
+    }
+    
+    return vegetation.toFixed(1);
+};
+
+const calculateHardSurfacePercent = (segments: any) => {
+    if (!segments) return 'N/A';
+    
+    const hardSurfaceClasses = ['building', 'road', 'route'];
+    let hardSurface = 0;
+    
+    for (const [className, percentage] of Object.entries(segments)) {
+        const classLower = className.toLowerCase();
+        for (const surfaceClass of hardSurfaceClasses) {
+            if (classLower.includes(surfaceClass.toLowerCase())) {
+                hardSurface += parseFloat(percentage) || 0;
+                break;
+            }
+        }
+    }
+    
+    return hardSurface.toFixed(1);
 };
 </script>
 
@@ -167,10 +304,31 @@ const formatEvidenceType = (evidenceType: string) => {
                 <span>•</span>
                 <span>Park: {{ heatAnalysis.park_name || 'Multiple Parks' }}</span>
                 <span>•</span>
-                <Badge :variant="heatAnalysis.status === 'Completed' ? 'default' : 'secondary'">
+                <Badge :variant="heatAnalysis.status?.toLowerCase() === 'completed' ? 'default' : 'secondary'">
                     {{ heatAnalysis.status }}
                 </Badge>
             </div>
+        </div>
+
+        <!-- Progress Indicator -->
+        <div v-if="currentStep" class="mb-6">
+            <Card>
+                <CardContent class="pt-6">
+                    <div class="flex items-center gap-4">
+                        <Loader2 class="h-5 w-5 animate-spin text-blue-600" />
+                        <div class="flex-1">
+                            <div class="flex justify-between text-sm mb-2">
+                                <span>Processing Analysis</span>
+                                <span>{{ getStepLabel(currentStep) }}</span>
+                            </div>
+                            <div class="w-full bg-gray-200 rounded-full h-2">
+                                <div class="bg-blue-600 h-2 rounded-full transition-all" 
+                                     :style="{ width: getProgressPercentage() + '%' }"></div>
+                            </div>
+                        </div>
+                    </div>
+                </CardContent>
+            </Card>
         </div>
 
         <!-- Map Section -->
@@ -201,7 +359,38 @@ const formatEvidenceType = (evidenceType: string) => {
                 <CardDescription>Analyze environmental factors for selected parks</CardDescription>
             </CardHeader>
             <CardContent>
-                <div v-if="environmentalResults.length === 0" class="flex items-center gap-4 mb-4">
+                <!-- Toggle Methodology Button -->
+                <Button 
+                    @click="showEnvironmentalMethodology = !showEnvironmentalMethodology"
+                    variant="outline"
+                    class="mb-4"
+                >
+                    <InfoIcon class="mr-2 h-4 w-4" />
+                    {{ showEnvironmentalMethodology ? 'Hide' : 'Show' }} Environmental Analysis Methodology
+                </Button>
+                
+                <!-- Environmental Analysis Methodology Overview -->
+                <div v-if="showEnvironmentalMethodology" class="mb-6 p-4 bg-green-50 dark:bg-green-950 rounded-lg border border-green-200 dark:border-green-800">
+                    <h4 class="font-semibold text-green-900 dark:text-green-100 mb-3 flex items-center gap-2">
+                        <InfoIcon class="h-4 w-4" />
+                        Environmental Analysis Methodology
+                    </h4>
+                    <p class="text-sm text-green-800 dark:text-green-200 mb-4">
+                        Environmental analysis uses FortyGuard API to gather real-time and historical environmental data:
+                    </p>
+                    <ul class="text-sm text-green-800 dark:text-green-200 list-disc list-inside space-y-2">
+                        <li><strong>Heat Index:</strong> Combines temperature and humidity to measure perceived heat</li>
+                        <li><strong>Air Quality Index:</strong> Measures air pollution levels affecting health</li>
+                        <li><strong>Relative Humidity:</strong> Percentage of moisture in the air</li>
+                        <li><strong>Surface Temperature:</strong> Actual temperature of surfaces (pavement, buildings)</li>
+                    </ul>
+                    <p class="text-xs text-green-700 dark:text-green-300 mt-4 italic">
+                        Data sourced from FortyGuard environmental monitoring stations and historical databases.
+                    </p>
+                </div>
+                
+                <!-- Show button only if no data and not loading -->
+                <div v-if="environmentalResults.length === 0 && stepStatus.environmental !== 'loading'" class="flex items-center gap-4 mb-4">
                     <Button 
                         @click="handleRunEnvironmental" 
                         :disabled="environmentalLoading"
@@ -209,8 +398,14 @@ const formatEvidenceType = (evidenceType: string) => {
                         class="bg-green-600 hover:bg-green-700"
                     >
                         <Loader2 v-if="environmentalLoading" class="mr-2 h-4 w-4 animate-spin" />
-                        Run Environmental Analysis
+                        {{ stepStatus.environmental === 'failed' ? 'Retry Environmental Analysis' : 'Run Environmental Analysis' }}
                     </Button>
+                </div>
+                
+                <!-- Show loading state -->
+                <div v-if="stepStatus.environmental === 'loading'" class="flex items-center gap-2 text-muted-foreground mb-4">
+                    <Loader2 class="h-4 w-4 animate-spin" />
+                    Running environmental analysis...
                 </div>
                 
                 <div v-if="environmentalResults.length > 0" class="space-y-4">
@@ -253,7 +448,38 @@ const formatEvidenceType = (evidenceType: string) => {
                 <CardDescription>Analyze satellite imagery for selected parks</CardDescription>
             </CardHeader>
             <CardContent>
-                <div v-if="satelliteResults.length === 0" class="flex items-center gap-4 mb-4">
+                <!-- Toggle Methodology Button -->
+                <Button 
+                    @click="showSatelliteMethodology = !showSatelliteMethodology"
+                    variant="outline"
+                    class="mb-4"
+                >
+                    <InfoIcon class="mr-2 h-4 w-4" />
+                    {{ showSatelliteMethodology ? 'Hide' : 'Show' }} Satellite Analysis Methodology
+                </Button>
+                
+                <!-- Satellite Analysis Methodology Overview -->
+                <div v-if="showSatelliteMethodology" class="mb-6 p-4 bg-blue-50 dark:bg-blue-950 rounded-lg border border-blue-200 dark:border-blue-800">
+                    <h4 class="font-semibold text-blue-900 dark:text-blue-100 mb-3 flex items-center gap-2">
+                        <InfoIcon class="h-4 w-4" />
+                        Satellite Analysis Methodology
+                    </h4>
+                    <p class="text-sm text-blue-800 dark:text-blue-200 mb-4">
+                        Satellite analysis uses FortyGuard API to analyze imagery and land cover:
+                    </p>
+                    <ul class="text-sm text-blue-800 dark:text-blue-200 list-disc list-inside space-y-2">
+                        <li><strong>Original Imagery:</strong> High-resolution satellite images of park areas</li>
+                        <li><strong>Segmentation Analysis:</strong> AI-powered classification of land cover types</li>
+                        <li><strong>Vegetation Coverage:</strong> Percentage of trees, plants, and grass</li>
+                        <li><strong>Hard Surface Percentage:</strong> Buildings, roads, and paved areas</li>
+                    </ul>
+                    <p class="text-xs text-blue-700 dark:text-blue-300 mt-4 italic">
+                        Data sourced from FortyGuard satellite imagery processing and segmentation models.
+                    </p>
+                </div>
+                
+                <!-- Show button only if no data and not loading -->
+                <div v-if="satelliteResults.length === 0 && stepStatus.satellite !== 'loading'" class="flex items-center gap-4 mb-4">
                     <Button 
                         @click="handleRunSatellite" 
                         :disabled="satelliteLoading"
@@ -261,8 +487,14 @@ const formatEvidenceType = (evidenceType: string) => {
                         class="bg-blue-600 hover:bg-blue-700"
                     >
                         <Loader2 v-if="satelliteLoading" class="mr-2 h-4 w-4 animate-spin" />
-                        Run Satellite Analysis
+                        {{ stepStatus.satellite === 'failed' ? 'Retry Satellite Analysis' : 'Run Satellite Analysis' }}
                     </Button>
+                </div>
+                
+                <!-- Show loading state -->
+                <div v-if="stepStatus.satellite === 'loading'" class="flex items-center gap-2 text-muted-foreground mb-4">
+                    <Loader2 class="h-4 w-4 animate-spin" />
+                    Running satellite analysis...
                 </div>
                 
                 <div v-if="satelliteResults.length > 0" class="space-y-4">
@@ -270,13 +502,13 @@ const formatEvidenceType = (evidenceType: string) => {
                         <h3 class="font-semibold">{{ result.park_name }}</h3>
                         
                         <!-- Images Section -->
-                        <div v-if="result.data?.original_image?.[0]" class="mt-4">
+                        <div v-if="result.data?.original_image?.[0] || result.data?.orignal_image?.[0]" class="mt-4">
                             <p class="text-sm font-medium text-muted-foreground mb-2">Satellite Imagery</p>
                             <div class="flex gap-2">
                                 <div class="flex-1">
                                     <p class="text-xs text-muted-foreground mb-1">Original</p>
                                     <img 
-                                        :src="`data:image/png;base64,${result.data.original_image[0]}`" 
+                                        :src="`data:image/png;base64,${result.data?.original_image?.[0] || result.data?.orignal_image?.[0]}`" 
                                         :alt="`Original satellite imagery for ${result.park_name}`"
                                         class="w-full h-64 object-contain rounded-lg"
                                     />
@@ -297,13 +529,23 @@ const formatEvidenceType = (evidenceType: string) => {
                             <p class="text-sm font-medium text-muted-foreground mb-2">Land Cover Analysis</p>
                             <div class="grid grid-cols-2 gap-4 text-sm">
                                 <div>
-                                    <span class="text-muted-foreground">Tree Canopy:</span>
-                                    <span class="ml-2">{{ result.data.segmentation.segments.building || 'N/A' }}%</span>
+                                    <span class="text-muted-foreground">Vegetation Cover:</span>
+                                    <span class="ml-2">{{ calculateVegetationPercent(result.data.segmentation.segments) }}%</span>
                                 </div>
                                 <div>
-                                    <span class="text-muted-foreground">Impervious Surface:</span>
-                                    <span class="ml-2">{{ result.data.segmentation.segments['road, route'] || 'N/A' }}%</span>
+                                    <span class="text-muted-foreground">Hard Surface:</span>
+                                    <span class="ml-2">{{ calculateHardSurfacePercent(result.data.segmentation.segments) }}%</span>
                                 </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Show raw segments for debugging if calculation fails -->
+                        <div v-if="result.data?.segmentation?.segments" class="mt-4 pt-4 border-t">
+                            <p class="text-xs text-muted-foreground mb-2">Available Segments:</p>
+                            <div class="text-xs">
+                                <span v-for="(value, key) in result.data.segmentation.segments" :key="key" class="inline-block mr-2">
+                                    {{ key }}: {{ value }}%
+                                </span>
                             </div>
                         </div>
                     </div>
@@ -325,34 +567,65 @@ const formatEvidenceType = (evidenceType: string) => {
                 <CardDescription>{{ priorityScoringOverview?.description || 'Calculate priority scores for parks based on multiple factors' }}</CardDescription>
             </CardHeader>
             <CardContent>
+                <!-- Toggle Methodology Button -->
+                <Button 
+                    @click="showPriorityMethodology = !showPriorityMethodology"
+                    variant="outline"
+                    class="mb-4"
+                >
+                    <InfoIcon class="mr-2 h-4 w-4" />
+                    {{ showPriorityMethodology ? 'Hide' : 'Show' }} Priority Scoring Methodology
+                </Button>
+                
                 <!-- Priority Scoring Methodology Overview -->
-                <div v-if="priorityScoringOverview" class="mb-6 p-4 bg-blue-50 dark:bg-blue-950 rounded-lg border border-blue-200 dark:border-blue-800">
-                    <h4 class="font-semibold text-blue-900 dark:text-blue-100 mb-3 flex items-center gap-2">
-                        <Info class="h-4 w-4" />
-                        {{ priorityScoringOverview.title }}
-                    </h4>
-                    <p class="text-sm text-blue-800 dark:text-blue-200 mb-4">{{ priorityScoringOverview.calculation_note }}</p>
-                    
-                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-                        <div v-for="factor in priorityScoringOverview.factors" :key="factor.name" 
-                             class="p-3 bg-white dark:bg-gray-800 rounded border border-blue-100 dark:border-blue-900">
-                            <div class="flex items-center justify-between mb-1">
-                                <h5 class="font-medium text-sm text-gray-900 dark:text-gray-100">{{ factor.name }}</h5>
-                                <span class="text-xs px-2 py-0.5 rounded-full" 
-                                      :class="factor.weight === 'High' ? 'bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-300' : 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900 dark:text-yellow-300'">
-                                    {{ factor.weight }} Weight
-                                </span>
-                            </div>
-                            <p class="text-xs text-gray-600 dark:text-gray-400 mb-2">{{ factor.description }}</p>
-                            <div class="text-xs text-gray-500 dark:text-gray-500">
-                                Range: {{ factor.range }}
+                <div v-if="showPriorityMethodology" class="mb-6 p-4 bg-blue-50 dark:bg-blue-950 rounded-lg border border-blue-200 dark:border-blue-800">
+                    <template v-if="priorityScoringOverview">
+                        <h4 class="font-semibold text-blue-900 dark:text-blue-100 mb-3 flex items-center gap-2">
+                            <InfoIcon class="h-4 w-4" />
+                            {{ priorityScoringOverview.title }}
+                        </h4>
+                        <p class="text-sm text-blue-800 dark:text-blue-200 mb-4">{{ priorityScoringOverview.calculation_note }}</p>
+                        
+                        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                            <div v-for="factor in priorityScoringOverview.factors" :key="factor.name" 
+                                 class="p-3 bg-white dark:bg-gray-800 rounded border border-blue-100 dark:border-blue-900">
+                                <div class="flex items-center justify-between mb-1">
+                                    <h5 class="font-medium text-sm text-gray-900 dark:text-gray-100">{{ factor.name }}</h5>
+                                    <span class="text-xs px-2 py-0.5 rounded-full" 
+                                          :class="factor.weight === 'High' ? 'bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-300' : 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900 dark:text-yellow-300'">
+                                        {{ factor.weight }} Weight
+                                    </span>
+                                </div>
+                                <p class="text-xs text-gray-600 dark:text-gray-400 mb-2">{{ factor.description }}</p>
+                                <div class="text-xs text-gray-500 dark:text-gray-500">
+                                    Range: {{ factor.range }}
+                                </div>
                             </div>
                         </div>
-                    </div>
+                    </template>
+                    <template v-else>
+                        <h4 class="font-semibold text-blue-900 dark:text-blue-100 mb-3 flex items-center gap-2">
+                            <InfoIcon class="h-4 w-4" />
+                            Priority Scoring Methodology
+                        </h4>
+                        <p class="text-sm text-blue-800 dark:text-blue-200 mb-4">
+                            Priority scores are calculated based on:
+                        </p>
+                        <ul class="text-sm text-blue-800 dark:text-blue-200 list-disc list-inside space-y-2">
+                            <li><strong>Heat Exposure:</strong> Average temperature from heatmap analysis</li>
+                            <li><strong>Environmental Factors:</strong> Heat index, air quality, humidity from environmental analysis</li>
+                            <li><strong>Satellite Data:</strong> Vegetation coverage, hard surface percentage from satellite analysis</li>
+                            <li><strong>Vulnerability:</strong> Park characteristics and community vulnerability factors</li>
+                        </ul>
+                        <p class="text-xs text-blue-700 dark:text-blue-300 mt-4 italic">
+                            For detailed methodology, please refer to the Priority Scoring documentation.
+                        </p>
+                    </template>
                 </div>
                 
                 <!-- Priority Scoring Functionality -->
-                <div v-if="priorityScores.length === 0" class="flex items-center gap-4 mb-4">
+                <!-- Show button only if no data and not loading -->
+                <div v-if="priorityScores.length === 0 && stepStatus.priority !== 'loading'" class="flex items-center gap-4 mb-4">
                     <Button 
                         @click="handleCalculatePriority" 
                         :disabled="priorityLoading"
@@ -360,8 +633,14 @@ const formatEvidenceType = (evidenceType: string) => {
                         class="bg-orange-600 hover:bg-orange-700"
                     >
                         <Loader2 v-if="priorityLoading" class="mr-2 h-4 w-4 animate-spin" />
-                        Calculate Priority Scores
+                        {{ stepStatus.priority === 'failed' ? 'Retry Priority Scoring' : 'Calculate Priority Scores' }}
                     </Button>
+                </div>
+                
+                <!-- Show loading state -->
+                <div v-if="stepStatus.priority === 'loading'" class="flex items-center gap-2 text-muted-foreground mb-4">
+                    <Loader2 class="h-4 w-4 animate-spin" />
+                    Calculating priority scores...
                 </div>
                 
                 <div v-else class="space-y-4">
@@ -411,34 +690,65 @@ const formatEvidenceType = (evidenceType: string) => {
                 <CardDescription>{{ interventionRecommendationsOverview?.description || 'Generate intervention recommendations based on priority scores' }}</CardDescription>
             </CardHeader>
             <CardContent>
+                <!-- Toggle Methodology Button -->
+                <Button 
+                    @click="showInterventionMethodology = !showInterventionMethodology"
+                    variant="outline"
+                    class="mb-4"
+                >
+                    <InfoIcon class="mr-2 h-4 w-4" />
+                    {{ showInterventionMethodology ? 'Hide' : 'Show' }} Intervention Recommendations Methodology
+                </Button>
+                
                 <!-- Intervention Recommendations Methodology Overview -->
-                <div v-if="interventionRecommendationsOverview" class="mb-6 p-4 bg-purple-50 dark:bg-purple-950 rounded-lg border border-purple-200 dark:border-purple-800">
-                    <h4 class="font-semibold text-purple-900 dark:text-purple-100 mb-3 flex items-center gap-2">
-                        <Info class="h-4 w-4" />
-                        {{ interventionRecommendationsOverview.title }}
-                    </h4>
-                    <p class="text-sm text-purple-800 dark:text-purple-200 mb-4">{{ interventionRecommendationsOverview.calculation_note }}</p>
-                    
-                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-                        <div v-for="factor in interventionRecommendationsOverview.factors" :key="factor.name" 
-                             class="p-3 bg-white dark:bg-gray-800 rounded border border-purple-100 dark:border-purple-900">
-                            <div class="flex items-center justify-between mb-1">
-                                <h5 class="font-medium text-sm text-gray-900 dark:text-gray-100">{{ factor.name }}</h5>
-                                <span class="text-xs px-2 py-0.5 rounded-full" 
-                                      :class="factor.weight === 'High' ? 'bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-300' : 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900 dark:text-yellow-300'">
-                                    {{ factor.weight }} Weight
-                                </span>
-                            </div>
-                            <p class="text-xs text-gray-600 dark:text-gray-400 mb-2">{{ factor.description }}</p>
-                            <div class="text-xs text-gray-500 dark:text-gray-500">
-                                Range: {{ factor.range }}
+                <div v-if="showInterventionMethodology" class="mb-6 p-4 bg-purple-50 dark:bg-purple-950 rounded-lg border border-purple-200 dark:border-purple-800">
+                    <template v-if="interventionRecommendationsOverview">
+                        <h4 class="font-semibold text-purple-900 dark:text-purple-100 mb-3 flex items-center gap-2">
+                            <InfoIcon class="h-4 w-4" />
+                            {{ interventionRecommendationsOverview.title }}
+                        </h4>
+                        <p class="text-sm text-purple-800 dark:text-purple-200 mb-4">{{ interventionRecommendationsOverview.calculation_note }}</p>
+                        
+                        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                            <div v-for="factor in interventionRecommendationsOverview.factors" :key="factor.name" 
+                                 class="p-3 bg-white dark:bg-gray-800 rounded border border-purple-100 dark:border-purple-900">
+                                <div class="flex items-center justify-between mb-1">
+                                    <h5 class="font-medium text-sm text-gray-900 dark:text-gray-100">{{ factor.name }}</h5>
+                                    <span class="text-xs px-2 py-0.5 rounded-full" 
+                                          :class="factor.weight === 'High' ? 'bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-300' : 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900 dark:text-yellow-300'">
+                                        {{ factor.weight }} Weight
+                                    </span>
+                                </div>
+                                <p class="text-xs text-gray-600 dark:text-gray-400 mb-2">{{ factor.description }}</p>
+                                <div class="text-xs text-gray-500 dark:text-gray-500">
+                                    Range: {{ factor.range }}
+                                </div>
                             </div>
                         </div>
-                    </div>
+                    </template>
+                    <template v-else>
+                        <h4 class="font-semibold text-purple-900 dark:text-purple-100 mb-3 flex items-center gap-2">
+                            <InfoIcon class="h-4 w-4" />
+                            Intervention Recommendations Methodology
+                        </h4>
+                        <p class="text-sm text-purple-800 dark:text-purple-200 mb-4">
+                            Intervention recommendations are generated based on:
+                        </p>
+                        <ul class="text-sm text-purple-800 dark:text-purple-200 list-disc list-inside space-y-2">
+                            <li><strong>Priority Scores:</strong> Parks with higher heat vulnerability and exposure receive priority</li>
+                            <li><strong>Intervention Types:</strong> Trees, ramadas, cool pavement, and shade structures based on park characteristics</li>
+                            <li><strong>Cooling Benefits:</strong> Phoenix research evidence on temperature reduction for each intervention type</li>
+                            <li><strong>Cost Analysis:</strong> Upfront costs and maintenance considerations for Phoenix climate</li>
+                        </ul>
+                        <p class="text-xs text-purple-700 dark:text-purple-300 mt-4 italic">
+                            For detailed methodology, please refer to the Cooling Solutions documentation.
+                        </p>
+                    </template>
                 </div>
                 
                 <!-- Intervention Recommendations Functionality -->
-                <div v-if="interventionRecommendations.length === 0" class="flex items-center gap-4 mb-4">
+                <!-- Show button only if no data and not loading -->
+                <div v-if="interventionRecommendations.length === 0 && stepStatus.interventions !== 'loading'" class="flex items-center gap-4 mb-4">
                     <Button 
                         @click="handleGenerateRecommendations" 
                         :disabled="interventionLoading"
@@ -446,8 +756,14 @@ const formatEvidenceType = (evidenceType: string) => {
                         class="bg-purple-600 hover:bg-purple-700"
                     >
                         <Loader2 v-if="interventionLoading" class="mr-2 h-4 w-4 animate-spin" />
-                        Generate Recommendations
+                        {{ stepStatus.interventions === 'failed' ? 'Retry Intervention Recommendations' : 'Generate Intervention Recommendations' }}
                     </Button>
+                </div>
+                
+                <!-- Show loading state -->
+                <div v-if="stepStatus.interventions === 'loading'" class="flex items-center gap-2 text-muted-foreground mb-4">
+                    <Loader2 class="h-4 w-4 animate-spin" />
+                    Generating intervention recommendations...
                 </div>
                 
                 <div v-else class="space-y-4">
@@ -530,53 +846,125 @@ const formatEvidenceType = (evidenceType: string) => {
                 <CardDescription>{{ budgetOptimizationOverview?.description || 'Optimize intervention investments within budget constraints' }}</CardDescription>
             </CardHeader>
             <CardContent>
+                <!-- Toggle Methodology Button -->
+                <Button 
+                    @click="showBudgetMethodology = !showBudgetMethodology"
+                    variant="outline"
+                    class="mb-4"
+                >
+                    <InfoIcon class="mr-2 h-4 w-4" />
+                    {{ showBudgetMethodology ? 'Hide' : 'Show' }} Budget Optimization Methodology
+                </Button>
+                
                 <!-- Budget Optimization Methodology Overview -->
-                <div v-if="budgetOptimizationOverview" class="mb-6 p-4 bg-emerald-50 dark:bg-emerald-950 rounded-lg border border-emerald-200 dark:border-emerald-800">
-                    <h4 class="font-semibold text-emerald-900 dark:text-emerald-100 mb-3 flex items-center gap-2">
-                        <Info class="h-4 w-4" />
-                        {{ budgetOptimizationOverview.title }}
-                    </h4>
-                    <p class="text-sm text-emerald-800 dark:text-emerald-200 mb-4">{{ budgetOptimizationOverview.calculation_note }}</p>
-                    
-                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-                        <div v-for="factor in budgetOptimizationOverview.factors" :key="factor.name" 
-                             class="p-3 bg-white dark:bg-gray-800 rounded border border-emerald-100 dark:border-emerald-900">
-                            <div class="flex items-center justify-between mb-1">
-                                <h5 class="font-medium text-sm text-gray-900 dark:text-gray-100">{{ factor.name }}</h5>
-                                <span class="text-xs px-2 py-0.5 rounded-full" 
-                                      :class="factor.weight === 'High' ? 'bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-300' : 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900 dark:text-yellow-300'">
-                                    {{ factor.weight }} Weight
-                                </span>
-                            </div>
-                            <p class="text-xs text-gray-600 dark:text-gray-400 mb-2">{{ factor.description }}</p>
-                            <div class="text-xs text-gray-500 dark:text-gray-500">
-                                Range: {{ factor.range }}
+                <div v-if="showBudgetMethodology" class="mb-6 p-4 bg-emerald-50 dark:bg-emerald-950 rounded-lg border border-emerald-200 dark:border-emerald-800">
+                    <template v-if="budgetOptimizationOverview">
+                        <h4 class="font-semibold text-emerald-900 dark:text-emerald-100 mb-3 flex items-center gap-2">
+                            <InfoIcon class="h-4 w-4" />
+                            {{ budgetOptimizationOverview.title }}
+                        </h4>
+                        <p class="text-sm text-emerald-800 dark:text-emerald-200 mb-4">{{ budgetOptimizationOverview.calculation_note }}</p>
+                        
+                        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                            <div v-for="factor in budgetOptimizationOverview.factors" :key="factor.name" 
+                                 class="p-3 bg-white dark:bg-gray-800 rounded border border-emerald-100 dark:border-emerald-900">
+                                <div class="flex items-center justify-between mb-1">
+                                    <h5 class="font-medium text-sm text-gray-900 dark:text-gray-100">{{ factor.name }}</h5>
+                                    <span class="text-xs px-2 py-0.5 rounded-full" 
+                                          :class="factor.weight === 'High' ? 'bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-300' : 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900 dark:text-yellow-300'">
+                                        {{ factor.weight }} Weight
+                                    </span>
+                                </div>
+                                <p class="text-xs text-gray-600 dark:text-gray-400 mb-2">{{ factor.description }}</p>
+                                <div class="text-xs text-gray-500 dark:text-gray-500">
+                                    Range: {{ factor.range }}
+                                </div>
                             </div>
                         </div>
-                    </div>
+                    </template>
+                    <template v-else>
+                        <h4 class="font-semibold text-emerald-900 dark:text-emerald-100 mb-3 flex items-center gap-2">
+                            <InfoIcon class="h-4 w-4" />
+                            Budget Optimization Methodology
+                        </h4>
+                        <p class="text-sm text-emerald-800 dark:text-emerald-200 mb-4">
+                            The budget optimization algorithm prioritizes interventions based on:
+                        </p>
+                        <ul class="text-sm text-emerald-800 dark:text-emerald-200 list-disc list-inside space-y-2">
+                            <li><strong>Priority Score:</strong> Parks with higher heat exposure and vulnerability receive priority</li>
+                            <li><strong>Cooling Benefit:</strong> Interventions with higher temperature reduction potential are prioritized</li>
+                            <li><strong>Cost-Effectiveness:</strong> Maximizes cooling impact per dollar spent</li>
+                            <li><strong>Budget Constraints:</strong> Allocates funds across multiple parks within the specified budget</li>
+                        </ul>
+                        <p class="text-xs text-emerald-700 dark:text-emerald-300 mt-4 italic">
+                            For detailed methodology, please refer to the Budget Optimization documentation.
+                        </p>
+                    </template>
                 </div>
                 
                 <!-- Budget Optimization Functionality -->
-                <div v-if="!investmentPlan" class="flex items-center gap-4 mb-4">
-                    <div class="flex items-center gap-2">
-                        <label for="budget" class="text-sm font-medium">Budget ($):</label>
-                        <Input 
-                            id="budget" 
-                            v-model.number="budget" 
-                            type="number" 
-                            class="w-40"
-                            :min="0"
-                        />
+                <div v-if="!investmentPlan" class="space-y-4 mb-4">
+                    <!-- Budget Scenarios -->
+                    <div class="p-4 bg-emerald-50 dark:bg-emerald-950 rounded-lg border border-emerald-200 dark:border-emerald-800">
+                        <h4 class="font-semibold text-emerald-900 dark:text-emerald-100 mb-3 flex items-center gap-2">
+                            <InfoIcon class="h-4 w-4" />
+                            Budget Scenarios (Phoenix References)
+                        </h4>
+                        <div class="grid grid-cols-2 md:grid-cols-3 gap-2">
+                            <Button
+                                v-for="scenario in budgetScenarios"
+                                :key="scenario.name"
+                                @click="setBudgetScenario(scenario.amount)"
+                                :variant="budget === scenario.amount ? 'default' : 'outline'"
+                                :class="budget === scenario.amount ? 'bg-emerald-600 hover:bg-emerald-700' : ''"
+                                class="text-xs h-auto py-2 flex flex-col items-center gap-1"
+                            >
+                                <span class="font-medium">{{ scenario.name }}</span>
+                                <span class="text-xs opacity-80">${{(scenario.amount / 1000).toFixed(0)}}K</span>
+                            </Button>
+                        </div>
+                        <p class="text-xs text-emerald-700 dark:text-emerald-300 mt-2">
+                            {{ budgetScenarios.find(s => s.amount === budget)?.description || 'Custom budget' }}
+                        </p>
                     </div>
-                    <Button 
-                        @click="handleOptimizeBudget" 
-                        :disabled="budgetLoading"
-                        variant="default"
-                        class="bg-emerald-600 hover:bg-emerald-700"
-                    >
-                        <Loader2 v-if="budgetLoading" class="mr-2 h-4 w-4 animate-spin" />
-                        Generate Investment Plan
-                    </Button>
+
+                    <!-- Custom Budget Input -->
+                    <div class="flex items-center gap-4">
+                        <div class="flex items-center gap-2">
+                            <label for="budget" class="text-sm font-medium">Custom Budget ($):</label>
+                            <Input 
+                                id="budget" 
+                                v-model.number="budget" 
+                                type="number" 
+                                class="w-40"
+                                :min="0"
+                            />
+                        </div>
+                        <Button 
+                            @click="handleOptimizeBudget" 
+                            :disabled="budgetLoading"
+                            variant="default"
+                            class="bg-emerald-600 hover:bg-emerald-700"
+                        >
+                            <Loader2 v-if="budgetLoading" class="mr-2 h-4 w-4 animate-spin" />
+                            Generate Investment Plan
+                        </Button>
+                    </div>
+                    
+                    <!-- Budget Basis Note -->
+                    <div class="text-xs text-muted-foreground bg-gray-50 dark:bg-gray-800 p-3 rounded border">
+                        <strong>Budget Source:</strong> 
+                        <span v-if="budget === 1500000">
+                            Phoenix's $1.5M Neighborhood Parks Enhancement Program
+                        </span>
+                        <span v-else>
+                            Custom budget for testing different scenarios
+                        </span>
+                        <br>
+                        <em class="mt-1 block">
+                            <strong>Note:</strong> Phoenix's $1.5M program is used as a realistic reference. This doesn't mean Phoenix gives ParkHeat this budget - it's just for demonstration.
+                        </em>
+                    </div>
                 </div>
                 
                 <div v-else class="border rounded-lg p-4">
@@ -595,7 +983,7 @@ const formatEvidenceType = (evidenceType: string) => {
                         </div>
                         <div>
                             <span class="text-muted-foreground">Coverage:</span>
-                            <span class="ml-2 font-semibold">{{ (Number(investmentPlan.modeled_priority_coverage) * 100)?.toFixed(1) || 'N/A' }}%</span>
+                            <span class="ml-2 font-semibold">{{ Number(investmentPlan.modeled_priority_coverage)?.toFixed(1) || 'N/A' }}%</span>
                         </div>
                     </div>
                     

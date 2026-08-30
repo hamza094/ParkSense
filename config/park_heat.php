@@ -203,7 +203,7 @@ return [
                 'priority' => 10,
                 'when' => [
                     'heat_severity' => ['gte' => 50], // ParkHeat planning threshold
-                    'vegetation_percent' => ['lte' => 20], // ParkHeat planning threshold
+                    'vegetation_percent' => ['lte' => 45], // Relaxed to 45% so parks with partial grass coverage still get trees
                 ],
                 'package_selection' => [
                     'small' => [
@@ -227,7 +227,7 @@ return [
                 'priority' => 9,
                 'when' => [
                     'heat_severity' => ['gte' => 50], // ParkHeat planning threshold
-                    'hard_surface_percent' => ['gte' => 50], // ParkHeat planning threshold
+                    'hard_surface_percent' => ['gte' => 25], // Relaxed to 25% so significant parking/pathways get treated
                 ],
             ],
             'ramada' => [

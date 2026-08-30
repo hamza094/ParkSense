@@ -3,7 +3,7 @@
 > **Note**: Throughout this README, "intervention" refers to cooling solutions - practical strategies to make parks cooler and reduce temperature. The term "intervention" is used in the codebase and database for technical precision, but "cooling solutions" is used here for clearer understanding.
 
 ## 📍 What This Is
-After cooling solution recommendations are generated for the top 5 priority parks, our budget optimization system helps decision-makers allocate limited budgets across these recommendations to maximize impact. This algorithmic approach ensures every dollar spent achieves the greatest possible heat mitigation benefit.
+After we recommend cooling solutions for the top priority parks, our budget optimization system helps decide how to spend a limited budget to get the most cooling impact. It uses an algorithm to choose the best combination of recommendations that fits within the budget.
 
 ## 🎯 How Budget Optimization Works
 
@@ -14,10 +14,59 @@ After cooling solution recommendations are generated for the top 5 priority park
 4. **Create Investment Plan**: Store the optimized allocation with full transparency
 
 ### **Why Budget Optimization Matters**
-- **Limited Resources**: Cities have finite budgets for heat mitigation
-- **Maximum Impact**: Ensure every dollar achieves the greatest cooling benefit
-- **Transparent Decisions**: Clear algorithmic approach rather than arbitrary choices
-- **Scenario Planning**: Test different budget levels and see trade-offs
+- **Limited Money**: Cities have fixed budgets for cooling projects
+- **Maximum Impact**: Make sure every dollar does the most good
+- **Clear Decisions**: Use a proven algorithm instead of guessing
+- **Test Different Scenarios**: See what happens with different budget amounts
+
+## 💰 **Budget Scenarios and Phoenix References**
+
+### **Why We Use Phoenix Budget References**
+ParkHeat uses real Phoenix budget numbers to make the demo more realistic. These aren't budgets that Phoenix gives to ParkHeat - they're just official Phoenix amounts that help show how the system would work with real municipal funding.
+
+### **Phoenix Budget Reference We Use**
+
+**Phoenix Neighborhood Parks Enhancement Program (NPEP)**
+- **Amount**: $1.5 million
+- **What it's for**: Minor improvements to neighborhood parks
+- **Source**: Phoenix voter-approved bond program
+- **Evidence**: 🟢 Phoenix verified
+- **Link**: [City of Phoenix NPEP](https://www.phoenix.gov/administration/departments/parks/about-us/improvement-projects/neighborhood-parks-enhancement-program.html)
+
+### **Other Phoenix Budgets (For Context Only)**
+
+**Phoenix Parks & Recreation Department Budget**
+- **Amount**: ~$160 million per year
+- **Why we don't use it**: This is the entire department budget (staff, operations, maintenance) - not just for cooling projects
+- **Evidence**: 🟢 Phoenix verified
+
+**Phoenix Shade Phoenix Plan**
+- **Amount**: $60+ million over 5 years
+- **Why we don't use it**: This is a 5-year citywide investment plan, not a single project budget
+- **Evidence**: 🟢 Phoenix verified
+
+### **Budget Scenarios Available**
+
+| Scenario | Amount | Description | Type |
+|----------|--------|-------------|------|
+| Small Project | $250,000 | Good for testing with smaller budgets | 🟡 Planning scenario |
+| Medium Investment | $500,000 | Moderate budget for several park improvements | 🟡 Planning scenario |
+| Phoenix NPEP Reference | $1,500,000 | Based on Phoenix's $1.5M neighborhood park program | 🟢 Phoenix verified |
+
+### **Default Budget**
+We use **$1.5 million** as the default because it matches Phoenix's actual neighborhood park improvement program. This makes the demo more realistic while still letting you test with different amounts.
+
+### **Important Note**
+**The $1.5M budget is based on Phoenix's real program, but Phoenix doesn't give this money to ParkHeat. We use it as a realistic example to show how the system works.**
+
+### **Budget Flexibility**
+You can:
+- Choose from preset scenarios (including the Phoenix reference)
+- Type any custom amount you want to test
+- Compare results across different budget levels
+- See how budget size affects which parks get selected
+
+**Evidence**: 🟢 Phoenix verified for the $1.5M amount, 🟡 Planning assumptions for the smaller scenarios
 
 ## 💰 **How Benefits Are Calculated**
 
@@ -87,15 +136,15 @@ Modeled Benefit = 40 × 0.25 = 10.0
 
 ## 🧮 **How the Algorithm Works**
 
-### **Knapsack Algorithm Approach**
-Our system uses a **multiple-choice knapsack algorithm** to solve the budget optimization problem.
+### **The Knapsack Algorithm**
+We use a **knapsack algorithm** - this is a proven method for choosing the best items within a budget limit.
 
-### **The Problem It Solves**
-**Objective**: Maximize total benefit
-**Constraints**:
-- Total cost ≤ available budget
-- Maximum 1 intervention per park
-- Each park has multiple intervention options (tree packages, cool pavement, ramada)
+### **What It Does**
+**Goal**: Get the most cooling benefit for the money
+**Rules**:
+- Can't spend more than the budget allows
+- Can only pick one intervention per park
+- Each park has several options to choose from
 
 ### **Algorithm Steps**
 
@@ -202,23 +251,23 @@ Choose the state with maximum benefit within budget
 3. **Integer Selection**: Either select an intervention or not (no partial selections)
 
 ### **Why One Intervention Per Park**
-- **Practical Implementation**: Parks can't handle multiple simultaneous projects
-- **Focused Impact**: Concentrate resources on the highest-impact solution per park
-- **Manageable Scale**: Keeps implementation realistic
+- **Practical**: Parks can't easily handle multiple projects at once
+- **Focused**: Put resources into the best solution for each park
+- **Realistic**: Keeps the plan manageable
 
 ### **Alternative Approaches**
 - **Relaxed Constraint**: Allow multiple interventions per park (if budget permits)
 - **Minimum Impact**: Require minimum benefit threshold for any selection
 - **Geographic Distribution**: Ensure geographic spread across city
 
-## 💡 **Business Value**
+## 💡 **Why This Matters**
 
-**Enables:**
-✅ **Data-Driven Budgeting**: Algorithmic approach to maximize impact
-✅ **Scenario Planning**: Test different budget levels and outcomes
-✅ **Transparent Decisions**: Clear optimization logic and trade-offs
-✅ **Budget Justification**: Quantified benefit per dollar spent
-✅ **Prioritization Evidence**: Shows which parks provide most value
+**It helps you:**
+✅ **Spend Money Wisely**: Use data to get the most cooling impact
+✅ **Test Different Budgets**: See what happens with more or less money
+✅ **Make Clear Decisions**: Understand exactly why certain parks were chosen
+✅ **Show the Value**: Demonstrate the benefit per dollar spent
+✅ **Prioritize Effectively**: Focus on parks that need it most
 
 ## 🔧 **Technical Implementation**
 
@@ -230,37 +279,37 @@ Choose the state with maximum benefit within budget
 5. **Store Results**: Save investment plan with full transparency
 
 ### **Configuration**
-All optimization parameters are configured in `config/park_heat.php`:
-- **Scale Factors**: 0.25, 0.50, 0.90 for small/medium/large packages
-- **One Per Park Constraint**: Hard constraint in algorithm
-- **Budget Constraint**: Never exceed available budget
+All settings are in `config/park_heat.php`:
+- **Scale Factors**: 0.25, 0.50, 0.90 for small/medium/large projects
+- **One Per Park**: Can only pick one project per park
+- **Budget Limit**: Never spend more than the available budget
+- **Budget Scenarios**: Phoenix reference amounts ($250K, $500K, $1.5M) for realistic testing
 
 ## 🎯 **Important Notes**
 
-**Planning Model, Not Exact Benefit:**
-This is a planning model for budget optimization. Actual cooling benefits will vary based on:
-- Site-specific conditions
-- Implementation quality
-- Maintenance effectiveness
-- Climate variability
-- Other environmental factors
+**This Is a Planning Model**
+Real-world results will vary based on:
+- Specific park conditions
+- How well projects are implemented
+- Ongoing maintenance
+- Weather and climate factors
 
-**Modeled vs. Actual Benefits:**
-- **Modeled Benefit**: Priority score × scale factor (planning assumption)
-- **Actual Benefit**: Real temperature reduction, user comfort improvement
-- **Relationship**: Modeled benefit is a proxy for expected impact
+**Modeled vs. Real Benefits**
+- **Modeled Benefit**: Our calculated estimate (priority score × scale factor)
+- **Real Benefit**: Actual temperature reduction and comfort improvement
+- **The Connection**: Modeled benefit helps us estimate expected impact
 
-**Algorithm Limitations:**
-- **Integer Constraint**: Can't select partial interventions
-- **Linear Benefits**: Assumes benefits scale linearly with cost
-- **Static Priority**: Uses snapshot priority scores, not dynamic changes
+**Algorithm Limitations**
+- **Whole Projects Only**: Can't do partial projects
+- **Simple Scaling**: Assumes benefits scale steadily with cost
+- **Current Priorities**: Uses current park scores, not future changes
 
 ## 🎯 **Bottom Line**
 
-**Simple Version**: After we know which cooling solutions to recommend for the top 5 parks, our budget optimization system helps decision-makers figure out how to spend a limited budget to get the most cooling impact. It uses an algorithm to choose the best combination of recommendations that fits within the budget while maximizing benefit.
+**Simple Version**: After we recommend cooling solutions for priority parks, our system helps decide how to spend a limited budget to get the most cooling impact. It uses a smart algorithm to pick the best combination of projects that fits within the budget.
 
-**Technical Version**: Our budget optimization system uses a multiple-choice knapsack algorithm to maximize modeled benefit within budget constraints. The system converts cooling solution recommendations into budget options with costs (Phoenix-verified where possible) and modeled benefits (priority score × scale factor). The algorithm respects hard constraints (never exceed budget, one intervention per park) and generates optimized investment plans with transparency metrics including total cost, remaining budget, total modeled benefit, and priority coverage percentage.
+**Technical Version**: Our system uses a knapsack algorithm to maximize cooling benefit within budget limits. It converts recommendations into budget options with costs (Phoenix-verified where possible) and benefits (priority score × scale factor). The algorithm follows strict rules (never exceed budget, one project per park) and creates optimized plans with clear metrics showing total cost, remaining budget, and coverage percentage.
 
 ---
 
-*Powered by ParkHeat Budget Optimization Model v1 - Algorithmic budget allocation for maximum heat mitigation impact. Uses knapsack optimization with priority-based benefit modeling and Phoenix-referenced cost data.*
+*Powered by ParkHeat Budget Optimization Model v1 - Smart budget allocation for maximum cooling impact. Uses knapsack optimization with priority-based benefit modeling, Phoenix-referenced costs, and Phoenix budget scenarios ($1.5M NPEP reference for realistic demo).*

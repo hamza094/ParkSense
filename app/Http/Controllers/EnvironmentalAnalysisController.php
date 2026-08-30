@@ -39,9 +39,15 @@ class EnvironmentalAnalysisController extends Controller
     {
         try {
             $status = $this->service->checkStatus($activityId);
+            
+            \Log::info('Environmental status check', [
+                'activity_id' => $activityId,
+                'status' => $status['data']['status'] ?? 'unknown',
+                'has_result' => isset($status['data']['result'])
+            ]);
 
             // If analysis is completed, save the result to database
-            if ($status['data']['status'] === 'Completed' && isset($status['data']['result'])) {
+            if (strtolower($status['data']['status']) === 'completed' && isset($status['data']['result'])) {
                 try {
                     $this->service->saveResultByActivityId($activityId, $status['data']['result']);
                 } catch (\Exception $e) {
@@ -56,7 +62,7 @@ class EnvironmentalAnalysisController extends Controller
             }
 
             // If analysis failed, mark record as failed
-            if ($status['data']['status'] === 'Failed') {
+            if (strtolower($status['data']['status']) === 'failed') {
                 try {
                     $this->service->markAsFailed($activityId);
                 } catch (\Exception $e) {
