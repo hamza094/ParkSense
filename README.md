@@ -44,6 +44,7 @@ Please be aware of the following when testing or running this application locall
 5. **Top N Parks Analysis Limit**: By default, the application is configured to select the **top 3 hottest parks** (based on the heatmap record) for environmental and satellite analysis to avoid hitting API rate limits. If you need to analyze more parks at once, you can edit the `3` limit in these two controller files:
    - `app/Http/Controllers/EnvironmentalAnalysisController.php`
    - `app/Http/Controllers/SatelliteAnalysisController.php`
+6. **Flatland Parks Scope**: The dataset is strictly scoped to the **flatland municipal parks of the City of Phoenix** (189 parks in total). Mountain preserves, desert parks, and open space parks (e.g., Camelback Mountain, South Mountain Park) are intentionally excluded from the data model, aligning with standard municipal shade/cooling intervention programs where structural interventions (e.g., Ramadas, cool pavements) are feasible.
 
 ---
 
@@ -97,6 +98,16 @@ ParkSense solves these challenges through an end-to-end analytical pipeline:
 4. **5-Factor Weighted Priority Scoring**: Calculate composite urgency scores (0–100) reflecting heat severity, environmental stress, physical deficits, civic importance, and intervention feasibility.
 5. **Rule-Based Cooling Recommendations**: Trigger Phoenix-verified intervention packages (Tree Planting, Ramadas, Cool Pavement) tailored to each park's physical footprint.
 6. **Budget Optimization Engine**: Execute a Multiple-Choice Knapsack Algorithm to maximize community cooling benefit while strictly adhering to municipal budget limits.
+
+---
+
+## 🌍 Global Potential: Real-World Impact in South Asia
+
+While modeled using Phoenix datasets as a primary baseline, ParkSense is designed for universal geographic adaptability. It has immense potential in the Global South, particularly in South Asia (e.g., India, Pakistan, Bangladesh):
+
+* **Extreme Climate Vulnerability**: South Asian urban centers frequently face prolonged heatwaves with wet-bulb temperatures reaching dangerous thresholds (exceeding 45°C - 50°C), resulting in severe health crises for dense populations.
+* **Tight Budget Scarcity**: Unlike wealthy western municipalities, cities in South Asia work with extremely constrained budgets. The **Knapsack Budget Optimization Engine** represents the true value of this project: it mathematically calculates how to achieve the absolute maximum cooling benefit (e.g., opting for cost-effective native trees like Neem or Banyan versus expensive structures) within tight, realistic budget boundaries.
+* **Socioeconomic Prioritization**: By modifying the scoring weight configurations, cities can incorporate high-density slum data and local socio-economic demographics into the priority scorer, routing cooling resources directly to communities that lack indoor air conditioning—saving lives where it matters most.
 
 ---
 
@@ -224,69 +235,17 @@ sequenceDiagram
 ```
 parksense/
 ├── app/
-│   ├── Actions/                          # Single-purpose action classes
-│   │   ├── ManageHeatmapAnalysis.php
-│   │   └── SendFortyGuardHeatmapRequest.php
-│   ├── Helpers/
-│   │   └── CoolingBenefitHelper.php      # Phoenix research benefit linker
-│   ├── Http/Controllers/                 # Thin HTTP request controllers
-│   │   ├── EnvironmentalAnalysisController.php
-│   │   ├── HeatAnalysisDetailController.php
-│   │   ├── InterventionController.php
-│   │   ├── InvestmentController.php
-│   │   ├── ParkController.php
-│   │   ├── ParkPriorityScoreController.php
-│   │   └── SatelliteAnalysisController.php
-│   ├── Models/                           # Eloquent models & Spatial casts
-│   │   ├── EnvironmentalMetric.php
-│   │   ├── HeatmapAnalysis.php
-│   │   ├── InterventionRecommendation.php
-│   │   ├── InvestmentPlan.php
-│   │   ├── InvestmentPlanItem.php
-│   │   ├── Park.php
-│   │   ├── ParkHeatAnalysis.php
-│   │   ├── ParkPriorityScore.php
-│   │   └── SatelliteMetric.php
-│   └── Services/                         # Domain logic & Optimization engines
-│       ├── BudgetOptimizerService.php    # Knapsack algorithm engine
-│       ├── Calculators/                  # Modular priority score calculators
-│       │   ├── EnvironmentalStressCalculator.php
-│       │   ├── HeatSeverityCalculator.php
-│       │   ├── InterventionOpportunityCalculator.php
-│       │   ├── ParkImportanceCalculator.php
-│       │   └── PhysicalConditionCalculator.php
-│       ├── EnvironmentalAnalysisService.php
-│       ├── FortyGuard/FortyGuardClient.php
-│       ├── InterventionSelectionService.php
-│       ├── ParkHeatAnalysisService.php
-│       ├── ParkPriorityScoreService.php
-│       └── SatelliteAnalysisService.php
-├── config/
-│   ├── cooling_benefits.php              # Phoenix research evidence mapping
-│   ├── park_heat.php                     # Scoring weights, thresholds & catalog
-│   └── services.php                      # External API configuration
-├── database/
-│   ├── migrations/                       # Relational schema migrations
-│   └── seeders/                          # Phoenix Parks GIS GeoJSON seeders
-├── resources/
-│   ├── css/app.css                       # Tailwind CSS v4 styling
-│   └── js/
-│       ├── components/
-│       │   ├── dashboard/                # Specialized analysis cards
-│       │   ├── ui/                       # Shadcn UI primitives
-│       │   └── GoogleMap.vue             # Interactive drawing & heatmap renderer
-│       ├── composables/                  # Modular reactive state handlers
-│       │   ├── useBudgetOptimization.ts
-│       │   ├── useEnvironmentalAnalysis.ts
-│       │   ├── useHeatmapPolling.ts
-│       │   ├── useInterventionRecommendations.ts
-│       │   ├── usePriorityScoring.ts
-│       │   └── useSatelliteAnalysis.ts
-│       └── pages/
-│           ├── Dashboard.vue             # Project list & polygon creation
-│           └── HeatAnalysisDetail.vue    # Full analysis & optimization cockpit
-└── routes/
-    └── web.php                           # Application routes
+│   ├── Actions/        # Single-purpose action classes (Heatmap requests & management)
+│   ├── Http/           # HTTP controllers (Analysis triggers, priority scoring, budget optimization)
+│   ├── Models/         # Eloquent Models & spatial GIS geometry casts
+│   └── Services/       # Core domain services (Knapsack Budget Optimizer, Priority Scoring, FortyGuard Client)
+├── config/             # Weights, temperature thresholds, and cooling benefit evidence maps
+├── database/           # Schema migrations & Phoenix GeoJSON park GIS boundary seeders
+├── resources/js/       # SPA application layer (Vue 3, Shadcn-Vue, Google Maps API)
+│   ├── components/     # Reusable dashboard widgets, layout containers, and drawing map components
+│   ├── composables/    # State management hooks for asynchronous FortyGuard API polling
+│   └── pages/          # Primary SPA pages (Dashboard project list and analysis detail cockpit)
+└── routes/web.php      # Application routes and web endpoints
 ```
 
 ---
