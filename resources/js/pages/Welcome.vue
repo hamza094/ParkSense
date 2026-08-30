@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import { Head, Link } from '@inertiajs/vue3';
-import { dashboard, login } from '@/routes';
-import { register } from '@/routes';
+import { dashboard } from '@/routes';
 </script>
 
 <template>
@@ -17,26 +16,11 @@ import { register } from '@/routes';
         >
             <nav class="flex items-center justify-end gap-4">
                 <Link
-                    v-if="$page.props.auth.user"
                     :href="dashboard()"
                     class="inline-block rounded-sm border border-[#19140035] px-5 py-1.5 text-sm leading-normal text-[#1b1b18] hover:border-[#1915014a] dark:border-[#3E3E3A] dark:text-[#EDEDEC] dark:hover:border-[#62605b]"
                 >
                     Dashboard
                 </Link>
-                <template v-else>
-                    <Link
-                        :href="login()"
-                        class="inline-block rounded-sm border border-transparent px-5 py-1.5 text-sm leading-normal text-[#1b1b18] hover:border-[#19140035] dark:text-[#EDEDEC] dark:hover:border-[#3E3E3A]"
-                    >
-                        Log in
-                    </Link>
-                    <Link
-                        :href="register()"
-                        class="inline-block rounded-sm border border-[#19140035] px-5 py-1.5 text-sm leading-normal text-[#1b1b18] hover:border-[#1915014a] dark:border-[#3E3E3A] dark:text-[#EDEDEC] dark:hover:border-[#62605b]"
-                    >
-                        Register
-                    </Link>
-                </template>
             </nav>
         </header>
         <div
@@ -132,10 +116,10 @@ import { register } from '@/routes';
                     <ul class="flex gap-3 text-sm leading-normal">
                         <li>
                             <Link
-                                :href="login()"
+                                :href="dashboard()"
                                 class="inline-block rounded-sm border border-[#10b981] bg-[#10b981] px-5 py-1.5 text-sm leading-normal text-white hover:border-[#059669] hover:bg-[#059669] dark:border-[#10b981] dark:bg-[#10b981] dark:hover:border-[#059669] dark:hover:bg-[#059669]"
                             >
-                                Get Started
+                                Go to Dashboard
                             </Link>
                         </li>
                     </ul>

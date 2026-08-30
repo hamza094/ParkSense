@@ -4,6 +4,33 @@
 > 
 > *A data-driven decision-support platform combining satellite thermal analysis, AI land-cover segmentation, multi-criteria priority scoring, and budget-constrained knapsack optimization to protect urban communities from extreme heat.*
 
+## 🎬 Demo
+
+[![Watch Demo](https://img.shields.io/badge/Watch-3min%20Demo-red?logo=youtube)](YOUR_YOUTUBE_LINK_HERE)
+[![Live Demo](https://img.shields.io/badge/Live-Demo-brightgreen)](YOUR_LIVE_DEMO_URL_HERE)
+
+---
+
+## 🏆 Hackathon Judging Alignment
+
+| Criterion | Weight | How ParkSense Addresses It |
+|-----------|--------|----------------------------|
+| **Impact** | 40% | Solves real Phoenix heat mortality risk for 189 parks. Output is a ready-to-use investment plan referencing Phoenix's $1.5M Neighborhood Parks Enhancement Program budget |
+| **Technical Execution** | 35% | Laravel 11 service architecture, MySQL spatial ST_Intersects queries, async multi-park FortyGuard polling, 5-factor weighted scorer, Knapsack DP budget optimizer |
+| **Innovation** | 15% | End-to-end pipeline from thermal map → satellite segmentation → priority score → budget plan. Multi-choice Knapsack optimization for municipal investment allocation |
+| **Communication** | 10% | 3-tier evidence framework (🟢🟡🔵), transparent config in `park_heat.php`, 6 specialized READMEs, every number linked to source |
+
+---
+
+## 🔵 FortyGuard API Integration
+
+| FortyGuard API | How ParkSense Uses It |
+|---------------|----------------------|
+| **Heatmap / TCM** | 60m thermal tiles submitted via polygon AOI → matched to park boundaries → average temp per park |
+| **Environmental Parameters** | Heat index, humidity, wet bulb, solar GHI per park → feeds Environmental Stress score (20% weight) |
+| **Satellite Segmentation** | AI land-cover analysis → tree %, hard surface %, bare ground % → feeds Physical Condition (15%) + Opportunity (10%) scores |
+| **Status Polling `/status/{id}`** | Async polling for all 3 parks in parallel using `Set`-based activity ID tracking — resolves only when all parks complete |
+
 ---
 
 ## 📋 Table of Contents

@@ -99,7 +99,8 @@ export function useHeatmapPolling(initialResult: any = null) {
             pollingInterval.value = null;
         }
         currentActivityId.value = null;
-        pollHttp.cancel();
+        // Don't cancel pollHttp - it causes HttpCancelledError on navigation
+        // The polling will naturally stop when the component unmounts
     };
 
     onUnmounted(() => {

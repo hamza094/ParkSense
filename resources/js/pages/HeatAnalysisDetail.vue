@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
-import { ArrowLeft, Loader2, Leaf, Satellite, Star, Lightbulb, DollarSign, Info as InfoIcon } from '@lucide/vue';
+import { ArrowLeft, Loader2, Leaf, Satellite, Star, Lightbulb, DollarSign, Info as InfoIcon, AlertTriangle } from '@lucide/vue';
 import GoogleMap from '@/components/GoogleMap.vue';
 import { useAnalysisOrchestrator } from '@/composables/useAnalysisOrchestrator';
 import { useBudgetOptimization } from '@/composables/useBudgetOptimization';
@@ -137,47 +137,67 @@ const {
     cancelAllPolling
 } = useAnalysisOrchestrator();
 
-const { runEnvironmentalAnalysis } = useEnvironmentalAnalysis();
-const { runSatelliteAnalysis } = useSatelliteAnalysis();
-const { calculatePriorityScores } = usePriorityScoring();
-const { generateRecommendations } = useInterventionRecommendations();
+const { runEnvironmentalAnalysis, loading: envLoading, processingParks: envProcessingParks } = useEnvironmentalAnalysis();
+const { runSatelliteAnalysis, loading: satLoading, processingParks: satProcessingParks } = useSatelliteAnalysis();
+const { calculatePriorityScores, loading: prioLoading } = usePriorityScoring();
+const { generateRecommendations, loading: intLoading } = useInterventionRecommendations();
 const { optimizeBudget, loading: budgetLoading } = useBudgetOptimization();
 const http = useHttp({});
 
 // Handlers
 const handleRunEnvironmental = async () => {
+    stepStatus.value.environmental = 'loading';
     try {
         await runEnvironmentalAnalysis(props.heatAnalysis.id);
+        stepStatus.value.environmental = 'completed';
         router.reload();
     } catch (error) {
+        stepStatus.value.environmental = 'failed';
         console.error('Environmental analysis failed:', error);
     }
 };
 
 const handleRunSatellite = async () => {
+    stepStatus.value.satellite = 'loading';
     try {
         await runSatelliteAnalysis(props.heatAnalysis.id);
+        stepStatus.value.satellite = 'completed';
         router.reload();
     } catch (error) {
+        stepStatus.value.satellite = 'failed';
         console.error('Satellite analysis failed:', error);
     }
 };
 
 const handleCalculatePriority = async () => {
+    stepStatus.value.priority = 'loading';
     try {
         await calculatePriorityScores(props.heatAnalysis.id);
+        stepStatus.value.priority = 'completed';
         router.reload();
     } catch (error) {
+        stepStatus.value.priority = 'failed';
         console.error('Priority scoring failed:', error);
     }
 };
 
 const handleGenerateRecommendations = async () => {
+    stepStatus.value.interventions = 'loading';
     try {
         await generateRecommendations(props.heatAnalysis.id);
+        stepStatus.value.interventions = 'completed';
         router.reload();
     } catch (error) {
+        stepStatus.value.interventions = 'failed';
         console.error('Intervention recommendations failed:', error);
+    }
+};
+
+const handleRunAllAnalyses = async () => {
+    try {
+        await runSequentialAnalysis(props.heatAnalysis.id);
+    } catch (error) {
+        console.error('Sequential analysis failed:', error);
     }
 };
 
@@ -298,15 +318,31 @@ const calculateHardSurfacePercent = (segments: any) => {
                 Back to Dashboard
             </Button>
             
-            <h1 class="text-3xl font-bold">Heat Analysis #{{ heatAnalysis.id }}</h1>
-            <div class="flex items-center gap-4 mt-2 text-sm text-muted-foreground">
-                <span>Created: {{ formatDate(heatAnalysis.created_at) }}</span>
-                <span>•</span>
-                <span>Park: {{ heatAnalysis.park_name || 'Multiple Parks' }}</span>
-                <span>•</span>
-                <Badge :variant="heatAnalysis.status?.toLowerCase() === 'completed' ? 'default' : 'secondary'">
-                    {{ heatAnalysis.status }}
-                </Badge>
+            <div class="flex items-center justify-between">
+                <div>
+                    <h1 class="text-3xl font-bold">Heat Analysis #{{ heatAnalysis.id }}</h1>
+                    <div class="flex items-center gap-4 mt-2 text-sm text-muted-foreground">
+                        <span>Created: {{ formatDate(heatAnalysis.created_at) }}</span>
+                        <span>•</span>
+                        <span>Park: {{ heatAnalysis.park_name || 'Multiple Parks' }}</span>
+                        <span>•</span>
+                        <Badge :variant="heatAnalysis.status?.toLowerCase() === 'completed' ? 'default' : 'secondary'">
+                            {{ heatAnalysis.status }}
+                        </Badge>
+                    </div>
+                </div>
+                
+                <!-- Run All Analyses Button - Only show if no data exists at all -->
+                <Button 
+                    v-if="parks.length > 0 && environmentalResults.length === 0 && satelliteResults.length === 0 && priorityScores.length === 0 && interventionRecommendations.length === 0"
+                    @click="handleRunAllAnalyses"
+                    :disabled="currentStep !== ''"
+                    variant="default"
+                    class="bg-indigo-600 hover:bg-indigo-700"
+                >
+                    <Loader2 v-if="currentStep" class="mr-2 h-4 w-4 animate-spin" />
+                    {{ currentStep ? 'Running Analyses...' : 'Run All Analyses' }}
+                </Button>
             </div>
         </div>
 
@@ -325,6 +361,29 @@ const calculateHardSurfacePercent = (segments: any) => {
                                 <div class="bg-blue-600 h-2 rounded-full transition-all" 
                                      :style="{ width: getProgressPercentage() + '%' }"></div>
                             </div>
+                        </div>
+                    </div>
+                </CardContent>
+            </Card>
+        </div>
+
+        <!-- No Parks Warning -->
+        <div v-if="parks.length === 0" class="mb-6">
+            <Card class="border-red-200 bg-red-50 dark:bg-red-950/20 dark:border-red-900">
+                <CardContent class="pt-6">
+                    <div class="flex items-start gap-4">
+                        <div class="p-2 bg-red-100 rounded-full dark:bg-red-900/50">
+                            <AlertTriangle class="h-6 w-6 text-red-600 dark:text-red-400" />
+                        </div>
+                        <div>
+                            <h3 class="text-lg font-semibold text-red-800 dark:text-red-300">No Parks Found in Selected Area</h3>
+                            <p class="text-sm text-red-700 dark:text-red-400 mt-1">
+                                The heatmap area you drew does not intersect with any registered parks. Because there are no parks, the environmental analysis and scoring cannot proceed. Please go back to the dashboard and draw a polygon that covers at least one park.
+                            </p>
+                            <Button @click="goBack" variant="outline" class="mt-4 border-red-300 text-red-700 hover:bg-red-100 dark:border-red-800 dark:text-red-300 dark:hover:bg-red-900/50">
+                                <ArrowLeft class="mr-2 h-4 w-4" />
+                                Return to Dashboard
+                            </Button>
                         </div>
                     </div>
                 </CardContent>
@@ -382,31 +441,41 @@ const calculateHardSurfacePercent = (segments: any) => {
                         <li><strong>Heat Index:</strong> Combines temperature and humidity to measure perceived heat</li>
                         <li><strong>Air Quality Index:</strong> Measures air pollution levels affecting health</li>
                         <li><strong>Relative Humidity:</strong> Percentage of moisture in the air</li>
-                        <li><strong>Surface Temperature:</strong> Actual temperature of surfaces (pavement, buildings)</li>
+                        <li><strong>Apparent Temperature:</strong> "Feels like" temperature accounting for heat, humidity and wind</li>
                     </ul>
                     <p class="text-xs text-green-700 dark:text-green-300 mt-4 italic">
                         Data sourced from FortyGuard environmental monitoring stations and historical databases.
                     </p>
                 </div>
                 
-                <!-- Show button only if no data and not loading -->
-                <div v-if="environmentalResults.length === 0 && stepStatus.environmental !== 'loading'" class="flex items-center gap-4 mb-4">
+                <!-- Show button only if no data and not loading AND (at least one section has data OR this step failed) -->
+                <div v-if="parks.length > 0 && environmentalResults.length === 0 && !envLoading && (satelliteResults.length > 0 || priorityScores.length > 0 || interventionRecommendations.length > 0 || stepStatus.environmental === 'failed')" class="flex items-center gap-4 mb-4">
                     <Button 
                         @click="handleRunEnvironmental" 
-                        :disabled="environmentalLoading"
+                        :disabled="envLoading"
                         variant="default"
                         class="bg-green-600 hover:bg-green-700"
                     >
-                        <Loader2 v-if="environmentalLoading" class="mr-2 h-4 w-4 animate-spin" />
+                        <Loader2 v-if="envLoading" class="mr-2 h-4 w-4 animate-spin" />
                         {{ stepStatus.environmental === 'failed' ? 'Retry Environmental Analysis' : 'Run Environmental Analysis' }}
                     </Button>
                 </div>
                 
-                <!-- Show loading state -->
-                <div v-if="stepStatus.environmental === 'loading'" class="flex items-center gap-2 text-muted-foreground mb-4">
-                    <Loader2 class="h-4 w-4 animate-spin" />
-                    Running environmental analysis...
+                <!-- Show park processing progress -->
+                <div v-if="envLoading && envProcessingParks.length > 0" class="mb-4 p-3 bg-green-50 dark:bg-green-950 rounded border border-green-200 dark:border-green-800">
+                    <div class="text-sm font-medium text-green-900 dark:text-green-100 mb-2">Processing parks:</div>
+                    <div class="space-y-1">
+                        <div v-for="park in envProcessingParks" :key="park.name" class="flex items-center gap-2 text-xs">
+                            <Loader2 v-if="park.status === 'processing'" class="h-3 w-3 animate-spin text-green-600" />
+                            <span v-else-if="park.status === 'completed'" class="text-green-600">✓</span>
+                            <span v-else-if="park.status === 'failed'" class="text-red-600">✗</span>
+                            <span class="text-green-800 dark:text-green-200">{{ park.name }}</span>
+                            <span class="text-muted-foreground">({{ park.status }})</span>
+                        </div>
+                    </div>
                 </div>
+                
+                <!-- Show loading state (removed - button already has spinner) -->
                 
                 <div v-if="environmentalResults.length > 0" class="space-y-4">
                     <div v-for="result in environmentalResults" :key="result.id" class="border rounded-lg p-4">
@@ -425,7 +494,7 @@ const calculateHardSurfacePercent = (segments: any) => {
                                 <span class="ml-2">{{ getAverageValue(result.data?.locations?.[0]?.parameters?.relative_humidity_percent) }}%</span>
                             </div>
                             <div>
-                                <span class="text-muted-foreground">Surface Temp:</span>
+                                <span class="text-muted-foreground">Apparent Temp:</span>
                                 <span class="ml-2">{{ getAverageValue(result.data?.locations?.[0]?.parameters?.apparent_temperature_celsius) }}°C</span>
                             </div>
                         </div>
@@ -478,24 +547,34 @@ const calculateHardSurfacePercent = (segments: any) => {
                     </p>
                 </div>
                 
-                <!-- Show button only if no data and not loading -->
-                <div v-if="satelliteResults.length === 0 && stepStatus.satellite !== 'loading'" class="flex items-center gap-4 mb-4">
+                <!-- Show button only if no data and not loading AND at least one section has data OR this step failed -->
+                <div v-if="parks.length > 0 && satelliteResults.length === 0 && !satLoading && (environmentalResults.length > 0 || priorityScores.length > 0 || interventionRecommendations.length > 0 || stepStatus.satellite === 'failed')" class="flex items-center gap-4 mb-4">
                     <Button 
                         @click="handleRunSatellite" 
-                        :disabled="satelliteLoading"
+                        :disabled="satLoading"
                         variant="default"
                         class="bg-blue-600 hover:bg-blue-700"
                     >
-                        <Loader2 v-if="satelliteLoading" class="mr-2 h-4 w-4 animate-spin" />
+                        <Loader2 v-if="satLoading" class="mr-2 h-4 w-4 animate-spin" />
                         {{ stepStatus.satellite === 'failed' ? 'Retry Satellite Analysis' : 'Run Satellite Analysis' }}
                     </Button>
                 </div>
                 
-                <!-- Show loading state -->
-                <div v-if="stepStatus.satellite === 'loading'" class="flex items-center gap-2 text-muted-foreground mb-4">
-                    <Loader2 class="h-4 w-4 animate-spin" />
-                    Running satellite analysis...
+                <!-- Show park processing progress -->
+                <div v-if="satLoading && satProcessingParks.length > 0" class="mb-4 p-3 bg-blue-50 dark:bg-blue-950 rounded border border-blue-200 dark:border-blue-800">
+                    <div class="text-sm font-medium text-blue-900 dark:text-blue-100 mb-2">Processing parks:</div>
+                    <div class="space-y-1">
+                        <div v-for="park in satProcessingParks" :key="park.name" class="flex items-center gap-2 text-xs">
+                            <Loader2 v-if="park.status === 'processing'" class="h-3 w-3 animate-spin text-blue-600" />
+                            <span v-else-if="park.status === 'completed'" class="text-blue-600">✓</span>
+                            <span v-else-if="park.status === 'failed'" class="text-red-600">✗</span>
+                            <span class="text-blue-800 dark:text-blue-200">{{ park.name }}</span>
+                            <span class="text-muted-foreground">({{ park.status }})</span>
+                        </div>
+                    </div>
                 </div>
+                
+                <!-- Show loading state (removed - button already has spinner) -->
                 
                 <div v-if="satelliteResults.length > 0" class="space-y-4">
                     <div v-for="result in satelliteResults" :key="result.id" class="border rounded-lg p-4">
@@ -624,24 +703,19 @@ const calculateHardSurfacePercent = (segments: any) => {
                 </div>
                 
                 <!-- Priority Scoring Functionality -->
-                <!-- Show button only if no data and not loading -->
-                <div v-if="priorityScores.length === 0 && stepStatus.priority !== 'loading'" class="flex items-center gap-4 mb-4">
+                <div v-if="parks.length > 0 && priorityScores.length === 0 && !prioLoading && (environmentalResults.length > 0 || satelliteResults.length > 0 || interventionRecommendations.length > 0 || stepStatus.priority === 'failed')" class="flex items-center gap-4 mb-4">
                     <Button 
                         @click="handleCalculatePriority" 
-                        :disabled="priorityLoading"
+                        :disabled="prioLoading"
                         variant="default"
                         class="bg-orange-600 hover:bg-orange-700"
                     >
-                        <Loader2 v-if="priorityLoading" class="mr-2 h-4 w-4 animate-spin" />
+                        <Loader2 v-if="prioLoading" class="mr-2 h-4 w-4 animate-spin" />
                         {{ stepStatus.priority === 'failed' ? 'Retry Priority Scoring' : 'Calculate Priority Scores' }}
                     </Button>
                 </div>
                 
-                <!-- Show loading state -->
-                <div v-if="stepStatus.priority === 'loading'" class="flex items-center gap-2 text-muted-foreground mb-4">
-                    <Loader2 class="h-4 w-4 animate-spin" />
-                    Calculating priority scores...
-                </div>
+                <!-- Show loading state (removed - button already has spinner) -->
                 
                 <div v-else class="space-y-4">
                     <div v-for="score in priorityScores" :key="score.id" class="border rounded-lg p-4">
@@ -674,6 +748,10 @@ const calculateHardSurfacePercent = (segments: any) => {
                                 <span class="text-muted-foreground">Park Importance:</span>
                                 <span class="ml-2">{{ score.park_importance?.toFixed(2) || 'N/A' }}</span>
                             </div>
+                            <div>
+                                <span class="text-muted-foreground">Intervention Opportunity:</span>
+                                <span class="ml-2">{{ score.intervention_opportunity?.toFixed(2) || 'N/A' }}</span>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -690,6 +768,12 @@ const calculateHardSurfacePercent = (segments: any) => {
                 <CardDescription>{{ interventionRecommendationsOverview?.description || 'Generate intervention recommendations based on priority scores' }}</CardDescription>
             </CardHeader>
             <CardContent>
+                <!-- Warning if no parks selected -->
+                <div v-if="parks.length === 0" class="mb-4 p-4 bg-amber-50 dark:bg-amber-950 border border-amber-200 dark:border-amber-800 rounded-lg flex items-center gap-3 text-amber-800 dark:text-amber-200">
+                    <AlertTriangle class="h-5 w-5" />
+                    <p class="text-sm">Please select at least one park to generate interventions.</p>
+                </div>
+
                 <!-- Toggle Methodology Button -->
                 <Button 
                     @click="showInterventionMethodology = !showInterventionMethodology"
@@ -747,24 +831,19 @@ const calculateHardSurfacePercent = (segments: any) => {
                 </div>
                 
                 <!-- Intervention Recommendations Functionality -->
-                <!-- Show button only if no data and not loading -->
-                <div v-if="interventionRecommendations.length === 0 && stepStatus.interventions !== 'loading'" class="flex items-center gap-4 mb-4">
+                <div v-if="parks.length > 0 && interventionRecommendations.length === 0 && !intLoading && (environmentalResults.length > 0 || satelliteResults.length > 0 || priorityScores.length > 0 || stepStatus.interventions === 'failed')" class="flex items-center gap-4 mb-4">
                     <Button 
                         @click="handleGenerateRecommendations" 
-                        :disabled="interventionLoading"
+                        :disabled="intLoading"
                         variant="default"
                         class="bg-purple-600 hover:bg-purple-700"
                     >
-                        <Loader2 v-if="interventionLoading" class="mr-2 h-4 w-4 animate-spin" />
+                        <Loader2 v-if="intLoading" class="mr-2 h-4 w-4 animate-spin" />
                         {{ stepStatus.interventions === 'failed' ? 'Retry Intervention Recommendations' : 'Generate Intervention Recommendations' }}
                     </Button>
                 </div>
                 
-                <!-- Show loading state -->
-                <div v-if="stepStatus.interventions === 'loading'" class="flex items-center gap-2 text-muted-foreground mb-4">
-                    <Loader2 class="h-4 w-4 animate-spin" />
-                    Generating intervention recommendations...
-                </div>
+                <!-- Show loading state (removed - button already has spinner) -->
                 
                 <div v-else class="space-y-4">
                     <div v-for="group in interventionRecommendations" :key="group.park.id" class="border rounded-lg p-4">

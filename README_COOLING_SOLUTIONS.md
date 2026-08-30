@@ -20,7 +20,7 @@ Our cooling solution recommendation system uses three levels of evidence:
 - Ramada midpoint planning value ($60K)
 - Cool pavement cost ($3/sq ft)
 - Treatment coverage (10% of hard surface)
-- Rule thresholds (heat ≥50, vegetation ≤20%)
+- Rule thresholds (heat ≥50, vegetation ≤45%, hard surface ≥25%)
 
 **🔵 FortyGuard Measurements**: Actual park condition data from satellite and environmental analysis
 - Park temperature and heat severity
@@ -87,7 +87,7 @@ Parks that scored high on "intervention opportunity" in priority scoring get lar
 
 **When Recommended**:
 - Heat severity ≥ 50 (ParkHeat planning threshold)
-- Vegetation ≤ 20% (ParkHeat planning threshold)
+- Vegetation ≤ 45% (ParkHeat planning threshold — relaxed to include parks with partial grass coverage)
 - Priority: 10 (highest priority cooling solution)
 
 **Evidence Level**: 🟡 ParkHeat planning threshold for rule matching
@@ -140,7 +140,7 @@ Parks that scored high on "intervention opportunity" in priority scoring get lar
 
 **When Recommended**:
 - Heat severity ≥ 50 (ParkHeat planning threshold)
-- Hard surface ≥ 50% (ParkHeat planning threshold)
+- Hard surface ≥ 25% (ParkHeat planning threshold — relaxed to include parks with significant parking or pathways)
 - Priority: 9 (high priority for heat reduction)
 
 **Evidence Level**: 🟡 ParkHeat planning threshold for rule matching
@@ -165,8 +165,8 @@ Each cooling solution has specific "trigger conditions" based on park data:
 **Threshold Values (The "When" Conditions):**
 - **Source**: `config/park_heat.php` - ParkHeat planning assumptions
 - **Heat severity ≥ 50**: ParkHeat planning threshold (not Phoenix-verified)
-- **Vegetation ≤ 20%**: ParkHeat planning threshold (not Phoenix-verified)
-- **Hard surface ≥ 50%**: ParkHeat planning threshold (not Phoenix-verified)
+- **Vegetation ≤ 45%**: ParkHeat planning threshold (not Phoenix-verified, relaxed from 20%)
+- **Hard surface ≥ 25%**: ParkHeat planning threshold (not Phoenix-verified, relaxed from 50%)
 - **Purpose**: Define when each cooling solution should be recommended
 
 **Actual Values Being Compared:**
@@ -192,8 +192,8 @@ Step 2: Intervention Selection
 └─ Compare against thresholds from config/park_heat.php
 
 Step 3: Rule Evaluation
-├─ Tree Planting: heat_severity ≥ 50 AND vegetation ≤ 20%
-├─ Cool Pavement: heat_severity ≥ 50 AND hard_surface ≥ 50%
+├─ Tree Planting: heat_severity ≥ 50 AND vegetation ≤ 45%
+├─ Cool Pavement: heat_severity ≥ 50 AND hard_surface ≥ 25%
 └─ Ramada: heat_severity ≥ 50 AND playground = true AND shade = false
 
 Step 4: Recommendation Generation
@@ -222,11 +222,11 @@ Step 4: Recommendation Generation
 - **Result**: No recommendations (doesn't meet minimum heat threshold)
 - **Note**: This park has relatively low heat stress compared to priority parks, so resources should focus on hotter parks
 
-**Park C**: Heat severity score of 55, 25% vegetation, 55% hard surface, playground, existing shade
-- ❌ Tree Planting: Fails (vegetation > 20%)
-- ✅ Cool Pavement: Matches (heat severity ≥ 50, hard surface ≥ 50%)
+**Park C**: Heat severity score of 55, 25% vegetation, 25% hard surface, playground, existing shade
+- ✅ Tree Planting: Matches (heat severity ≥ 50, vegetation ≤ 45%)
+- ✅ Cool Pavement: Matches (heat severity ≥ 50, hard surface ≥ 25%)
 - ❌ Ramada: Fails (existing shade = true)
-- **Result**: Cool pavement recommended only
+- **Result**: Tree planting + Cool pavement recommended (top 2 by priority)
 
 ## 📊 **Cost Calculation Logic**
 

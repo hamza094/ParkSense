@@ -66,7 +66,8 @@ defineOptions({
 
     <div class="container mx-auto py-6 px-4">
         <!-- Flash Messages -->
-        <div v-if="page.flash?.message" class="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded mb-4">
+        <div v-if="page.flash?.message" class="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded mb-4 flex items-center gap-3">
+            <Loader2 v-if="page.flash.message.includes('Processing')" class="h-5 w-5 animate-spin" />
             {{ page.flash.message }}
         </div>
         <div v-if="page.flash?.error" class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
@@ -129,12 +130,6 @@ defineOptions({
                     </div>
                 </CardContent>
             </Card>
-        </div>
-
-        <!-- Processing Status -->
-        <div v-if="currentActivityId && !heatmapResult" class="mt-6 flex items-center gap-3 bg-blue-50 border border-blue-200 text-blue-700 px-4 py-4 rounded-lg shadow-sm">
-            <Loader2 class="h-5 w-5 animate-spin" />
-            <span class="font-medium">Generating heatmap data for the selected area... This may take a moment.</span>
         </div>
     </div>
 </template>
