@@ -6,8 +6,8 @@
 
 ## 🎬 Demo
 
-[![Watch Demo](https://img.shields.io/badge/Watch-3min%20Demo-red?logo=youtube)](YOUR_YOUTUBE_LINK_HERE)
-[![Live Demo](https://img.shields.io/badge/Live-Demo-brightgreen)](YOUR_LIVE_DEMO_URL_HERE)
+[![Watch Demo](https://img.shields.io/badge/Watch-3min%20Demo-red?logo=loom)](https://www.loom.com/share/0175db19449b4d37a1ccee5d8501cd9a)
+[![Live Demo](https://img.shields.io/badge/Live-Demo-brightgreen)](https://parksense-production-n7ta4y.laravel.cloud/)
 
 ---
 
@@ -30,6 +30,20 @@
 | **Environmental Parameters** | Heat index, humidity, wet bulb, solar GHI per park → feeds Environmental Stress score (20% weight) |
 | **Satellite Segmentation** | AI land-cover analysis → tree %, hard surface %, bare ground % → feeds Physical Condition (15%) + Opportunity (10%) scores |
 | **Status Polling `/status/{id}`** | Async polling for all 3 parks in parallel using `Set`-based activity ID tracking — resolves only when all parks complete |
+
+---
+
+## ⚠️ Important Notes for Evaluators & Local Development
+
+Please be aware of the following when testing or running this application locally:
+
+1. **Google Maps API Key**: For local development, a valid Google Maps API Key is **required** for map and polygon-drawing functionality.
+2. **Live FortyGuard API Usage & Retries**: This application queries live FortyGuard APIs. Occasionally, API requests may require a manual retry if the external server takes too long to respond.
+3. **Incomplete Environmental Results**: The Environmental Parameters API polling can take a while to return a completed status. Sometimes it may return incomplete results (e.g., retrieving data for only 2 out of 3 parks) because the external API might drop or fail to process small or complex park geometries. **If this happens, refresh the page and select the park polygon again.**
+4. **Satellite Processing Time**: The Satellite AI Segmentation API works correctly but takes a little longer to process images. **Please be patient**—this latency is from the external FortyGuard API's processing side, not our application's end.
+5. **Top N Parks Analysis Limit**: By default, the application is configured to select the **top 3 hottest parks** (based on the heatmap record) for environmental and satellite analysis to avoid hitting API rate limits. If you need to analyze more parks at once, you can edit the `3` limit in these two controller files:
+   - `app/Http/Controllers/EnvironmentalAnalysisController.php`
+   - `app/Http/Controllers/SatelliteAnalysisController.php`
 
 ---
 

@@ -1,6 +1,18 @@
 <script setup lang="ts">
-import { Head, Link } from '@inertiajs/vue3';
+import { Head, Link, router } from '@inertiajs/vue3';
 import { dashboard } from '@/routes';
+import { ref } from 'vue';
+import { Loader2 } from '@lucide/vue';
+
+const isLoading = ref(false);
+
+router.on('start', () => {
+    isLoading.value = true;
+});
+
+router.on('finish', () => {
+    isLoading.value = false;
+});
 </script>
 
 <template>
@@ -17,9 +29,10 @@ import { dashboard } from '@/routes';
             <nav class="flex items-center justify-end gap-4">
                 <Link
                     :href="dashboard()"
-                    class="inline-block rounded-sm border border-[#19140035] px-5 py-1.5 text-sm leading-normal text-[#1b1b18] hover:border-[#1915014a] dark:border-[#3E3E3A] dark:text-[#EDEDEC] dark:hover:border-[#62605b]"
+                    class="inline-flex items-center justify-center rounded-sm border border-[#19140035] px-5 py-1.5 text-sm leading-normal text-[#1b1b18] hover:border-[#1915014a] dark:border-[#3E3E3A] dark:text-[#EDEDEC] dark:hover:border-[#62605b]"
                 >
-                    Dashboard
+                    <Loader2 v-if="isLoading" class="mr-2 h-4 w-4 animate-spin" />
+                    {{ isLoading ? 'Loading...' : 'Dashboard' }}
                 </Link>
             </nav>
         </header>
@@ -117,9 +130,10 @@ import { dashboard } from '@/routes';
                         <li>
                             <Link
                                 :href="dashboard()"
-                                class="inline-block rounded-sm border border-[#10b981] bg-[#10b981] px-5 py-1.5 text-sm leading-normal text-white hover:border-[#059669] hover:bg-[#059669] dark:border-[#10b981] dark:bg-[#10b981] dark:hover:border-[#059669] dark:hover:bg-[#059669]"
+                                class="inline-flex items-center justify-center rounded-sm border border-[#10b981] bg-[#10b981] px-5 py-1.5 text-sm leading-normal text-white hover:border-[#059669] hover:bg-[#059669] dark:border-[#10b981] dark:bg-[#10b981] dark:hover:border-[#059669] dark:hover:bg-[#059669]"
                             >
-                                Go to Dashboard
+                                <Loader2 v-if="isLoading" class="mr-2 h-4 w-4 animate-spin" />
+                                {{ isLoading ? 'Loading...' : 'Go to Dashboard' }}
                             </Link>
                         </li>
                     </ul>
