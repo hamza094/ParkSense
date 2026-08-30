@@ -24,8 +24,8 @@ class DatabaseSeeder extends Seeder
         
         // ParksSeeder is commented out to prevent automatic seeding during Laravel Cloud deployment
         // Run manually after first deployment: php artisan db:seed --class=ParksSeeder
-         $this->call([
-             ParksSeeder::class,
-         ]);
+        // $this->call([
+        //     ParksSeeder::class,
+        // ]);
     }
 }

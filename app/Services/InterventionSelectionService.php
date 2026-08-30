@@ -336,7 +336,7 @@ class InterventionSelectionService
                 'justification' =>
                     $justification,
 
-                'cooling_benefit' => $coolingBenefit ? json_encode($coolingBenefit) : null,
+                'cooling_benefit' => $coolingBenefit,
 
                 'model_version' =>
                     config(

@@ -35,11 +35,6 @@ class InterventionRecommendation extends Model
         'cooling_benefit' => 'array',
     ];
 
-    public function getCoolingBenefitAttribute($value)
-    {
-        return $value ? json_decode($value, true) : null;
-    }
-
     public function park()
     {
         return $this->belongsTo(Park::class);

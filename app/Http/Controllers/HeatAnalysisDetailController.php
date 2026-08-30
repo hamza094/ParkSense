@@ -253,6 +253,7 @@ class HeatAnalysisDetailController extends Controller
                         'source_url' => $item->source_url,
                         'rule' => $item->rule_matched,
                         'justification' => $item->justification,
+                        'cooling_benefit' => $item->cooling_benefit,
                     ])->values(),
                 ];
             })
