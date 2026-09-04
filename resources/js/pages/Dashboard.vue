@@ -115,7 +115,7 @@ defineOptions({
                             <div class="text-sm text-muted-foreground space-y-1">
                                 <div>Park: {{ analysis.park_name }}</div>
                                 <div>Date: {{ formatDate(analysis.created_at) }}</div>
-                                <div>Tiles: {{ analysis.tile_count }}</div>
+                                <div>Parks Analyzed: {{ analysis.tile_count }}</div>
                             </div>
                             <div class="mt-3 flex items-center text-sm text-primary">
                                 View Details
