@@ -143,16 +143,14 @@ We use a **knapsack algorithm** - this is a proven method for choosing the best 
 **Goal**: Get the most cooling benefit for the money
 **Rules**:
 - Can't spend more than the budget allows
-- Can only pick one intervention per park
-- Each park has several options to choose from
+- Each park can receive multiple different cooling solutions if budget permits
+- Every valid recommendation is treated as an independent candidate
 
 ### **Algorithm Steps**
 
-**Step 1: Group Options by Park**
+**Step 1: Flatten All Options**
 ```
-Park A: [Tree Small, Tree Medium, Tree Large, Cool Pavement]
-Park B: [Tree Small, Tree Medium, Tree Large, Ramada]
-Park C: [Tree Small, Tree Medium, Cool Pavement]
+Park A Tree, Park A Pavement, Park B Tree, Park C Tree, Park C Pavement
 ```
 
 **Step 2: Initialize States**
@@ -160,29 +158,20 @@ Park C: [Tree Small, Tree Medium, Cool Pavement]
 State 0: Cost = $0, Benefit = 0, Selected = []
 ```
 
-**Step 3: Process Each Park's Options**
-For each park, consider each option and update states:
+**Step 3: Process Each Option Independently**
+For each option (e.g., Park A Tree), consider adding it to all existing valid states:
 
 ```
-For Park A:
-- Tree Small: Cost $26,250, Benefit 20 → New State 1
-- Tree Medium: Cost $52,500, Benefit 40 → New State 2
-- Tree Large: Cost $105,000, Benefit 72 → New State 3
-- Cool Pavement: Cost $39,204, Benefit 48 → New State 4
+If adding option to state cost > budget: Skip
+If adding option to state cost ≤ budget: Create new state
 ```
 
-**Step 4: Apply Budget Constraint**
+**Step 4: Keep Best Option per Cost Level**
 ```
-If new_cost > budget: Skip this option
-If new_cost ≤ budget: Update state
-```
-
-**Step 5: Keep Best Option per Cost Level**
-```
-For each cost level, keep the option with maximum benefit
+For each cost level, keep the combination of options with maximum benefit
 ```
 
-**Step 6: Select Final Solution**
+**Step 5: Select Final Solution**
 ```
 Choose the state with maximum benefit within budget
 ```
@@ -219,8 +208,8 @@ Choose the state with maximum benefit within budget
 - Represents total heat mitigation impact
 - Used for comparison across budget scenarios
 
-**Best Possible Benefit**: Sum of best option per park (unconstrained)
-- Theoretical maximum if budget were unlimited
+**Best Possible Benefit**: Sum of all valid recommended interventions
+- Theoretical maximum if budget were unlimited to fund every single recommendation
 - Used to calculate coverage percentage
 
 **Modeled Priority Coverage**: (Total Benefit / Best Possible Benefit) × 100
@@ -247,18 +236,12 @@ Choose the state with maximum benefit within budget
 
 ### **Hard Constraints**
 1. **Never Exceed Budget**: Total cost must be ≤ available budget
-2. **One Intervention Per Park**: Maximum 1 cooling solution per park
+2. **No Duplicates**: The same exact intervention candidate cannot be selected twice
 3. **Integer Selection**: Either select an intervention or not (no partial selections)
 
-### **Why One Intervention Per Park**
-- **Practical**: Parks can't easily handle multiple projects at once
-- **Focused**: Put resources into the best solution for each park
-- **Realistic**: Keeps the plan manageable
-
-### **Alternative Approaches**
-- **Relaxed Constraint**: Allow multiple interventions per park (if budget permits)
-- **Minimum Impact**: Require minimum benefit threshold for any selection
-- **Geographic Distribution**: Ensure geographic spread across city
+### **Flexible Selection**
+- **Multiple Interventions**: A single park can receive multiple different cooling solutions (e.g., Tree Planting AND Cool Pavement) if both are recommended and the budget allows.
+- **Independent Evaluation**: Every recommendation competes independently based on its modeled benefit and cost.
 
 ## 💡 **Why This Matters**
 
@@ -281,7 +264,7 @@ Choose the state with maximum benefit within budget
 ### **Configuration**
 All settings are in `config/park_heat.php`:
 - **Scale Factors**: 0.25, 0.50, 0.90 for small/medium/large projects
-- **One Per Park**: Can only pick one project per park
+- **No Duplicates**: Cannot select the exact same candidate twice
 - **Budget Limit**: Never spend more than the available budget
 - **Budget Scenarios**: Phoenix reference amounts ($250K, $500K, $1.5M) for realistic testing
 
@@ -306,10 +289,8 @@ Real-world results will vary based on:
 
 ## 🎯 **Bottom Line**
 
-**Simple Version**: After we recommend cooling solutions for priority parks, our system helps decide how to spend a limited budget to get the most cooling impact. It uses a smart algorithm to pick the best combination of projects that fits within the budget.
-
-**Technical Version**: Our system uses a knapsack algorithm to maximize cooling benefit within budget limits. It converts recommendations into budget options with costs (Phoenix-verified where possible) and benefits (priority score × scale factor). The algorithm follows strict rules (never exceed budget, one project per park) and creates optimized plans with clear metrics showing total cost, remaining budget, and coverage percentage.
+After we recommend cooling solutions for priority parks, our system helps decide how to spend a limited budget to get the most cooling impact. It uses a smart 0/1 knapsack algorithm to pick the best combination of projects that fits within the budget, allowing multiple different solutions per park if funding permits.
 
 ---
 
-*Powered by ParkSense Budget Optimization Model v1 - Smart budget allocation for maximum cooling impact. Uses knapsack optimization with priority-based benefit modeling, Phoenix-referenced costs, and Phoenix budget scenarios ($1.5M NPEP reference for realistic demo).*
+*Powered by ParkSense Budget Optimization Model v1 - Smart budget allocation for maximum cooling impact. Uses 0/1 knapsack optimization with priority-based benefit modeling and Phoenix budget scenarios.*

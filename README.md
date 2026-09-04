@@ -33,7 +33,7 @@
 |-----------|--------|----------------------------|
 | **Impact** | 40% | Solves real Phoenix heat mortality risk for 189 parks. Output is a ready-to-use investment plan referencing Phoenix's $1.5M Neighborhood Parks Enhancement Program budget |
 | **Technical Execution** | 35% | Laravel 11 service architecture, MySQL spatial ST_Intersects queries, async multi-park FortyGuard polling, 5-factor weighted scorer, Knapsack DP budget optimizer |
-| **Innovation** | 15% | End-to-end pipeline from thermal map → satellite segmentation → priority score → budget plan. Multi-choice Knapsack optimization for municipal investment allocation |
+| **Innovation** | 15% | End-to-end pipeline from thermal map → satellite segmentation → priority score → budget plan. Smart budget allocation engine that maximizes cooling impact within municipal funding limits |
 | **Communication** | 10% | 3-tier evidence framework (🟢🟡🔵), transparent config, 6 specialized READMEs, every number linked to source |
 
 ---

@@ -79,17 +79,11 @@ class BudgetOptimizerService
     }
 
     /**
-     * Optimize investment using multiple-choice knapsack algorithm
-     * Never exceeds budget, one intervention per park
+     * Optimize investment using standard 0/1 knapsack algorithm
+     * Never exceeds budget, treats each recommendation independently
      */
     public function optimize(array $options, float $budget): array
     {
-        // Group options by park_id (one intervention per park constraint)
-        $groups = collect($options)
-            ->groupBy('park_id')
-            ->values()
-            ->all();
-
         // Initialize states with empty selection
         $states = [
             0 => [
@@ -99,37 +93,35 @@ class BudgetOptimizerService
             ],
         ];
 
-        // Process each park's options
-        foreach ($groups as $parkOptions) {
+        // Process each option independently
+        foreach ($options as $option) {
             $newStates = $states;
 
             foreach ($states as $state) {
-                foreach ($parkOptions as $option) {
-                    $newCost = $state['cost'] + $option['total_cost'];
+                $newCost = $state['cost'] + $option['total_cost'];
 
-                    // Never exceed budget constraint
-                    if ($newCost > $budget) {
-                        continue;
-                    }
+                // Never exceed budget constraint
+                if ($newCost > $budget) {
+                    continue;
+                }
 
-                    $newBenefit = $state['benefit'] + $option['modeled_benefit'];
+                $newBenefit = $state['benefit'] + $option['modeled_benefit'];
 
-                    // Convert to cents for safe integer array key
-                    $stateKey = (int) round($newCost * 100);
+                // Convert to cents for safe integer array key
+                $stateKey = (int) round($newCost * 100);
 
-                    // Keep best option for each cost level
-                    $existing = $newStates[$stateKey] ?? null;
+                // Keep best option for each cost level
+                $existing = $newStates[$stateKey] ?? null;
 
-                    if ($existing === null || $newBenefit > $existing['benefit']) {
-                        $newStates[$stateKey] = [
-                            'cost' => $newCost,
-                            'benefit' => $newBenefit,
-                            'selected' => [
-                                ...$state['selected'],
-                                $option,
-                            ],
-                        ];
-                    }
+                if ($existing === null || $newBenefit > $existing['benefit']) {
+                    $newStates[$stateKey] = [
+                        'cost' => $newCost,
+                        'benefit' => $newBenefit,
+                        'selected' => [
+                            ...$state['selected'],
+                            $option,
+                        ],
+                    ];
                 }
             }
 
@@ -157,16 +149,11 @@ class BudgetOptimizerService
     }
 
     /**
-     * Calculate best possible benefit (sum of best option per park)
+     * Calculate best possible benefit (sum of all valid options)
      */
     private function calculateBestPossibleBenefit(array $options): float
     {
-        return collect($options)
-            ->groupBy('park_id')
-            ->map(function ($parkOptions) {
-                return $parkOptions->max('modeled_benefit');
-            })
-            ->sum();
+        return collect($options)->sum('modeled_benefit');
     }
 
     /**

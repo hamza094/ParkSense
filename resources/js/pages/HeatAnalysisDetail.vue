@@ -1061,7 +1061,7 @@ const calculateHardSurfacePercent = (segments: any) => {
                             <span class="ml-2 font-semibold">${{ Number(investmentPlan.remaining_budget)?.toFixed(2) || 'N/A' }}</span>
                         </div>
                         <div>
-                            <span class="text-muted-foreground">Coverage:</span>
+                            <span class="text-muted-foreground">Modeled Benefit Coverage:</span>
                             <span class="ml-2 font-semibold">{{ Number(investmentPlan.modeled_priority_coverage)?.toFixed(1) || 'N/A' }}%</span>
                         </div>
                     </div>
